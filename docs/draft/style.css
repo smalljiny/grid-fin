@@ -1,0 +1,65 @@
+:root{
+  --fg:#1c1b1a; --bg:#fbfaf9; --muted:#6d6a66; --line:#d6d2cc;
+  --accent:#b0491c; --accent-soft:rgba(176,73,28,.09); --panel:rgba(0,0,0,.02); --net:#1d4ed8;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --fg:#e9e6e2; --bg:#191817; --muted:#9c9791; --line:#3b3835;
+    --accent:#e2895b; --accent-soft:rgba(226,137,91,.11); --panel:rgba(255,255,255,.025); --net:#93c5fd;
+  }
+}
+:root[data-theme="light"]{
+  --fg:#1c1b1a; --bg:#fbfaf9; --muted:#6d6a66; --line:#d6d2cc;
+  --accent:#b0491c; --accent-soft:rgba(176,73,28,.09); --panel:rgba(0,0,0,.02); --net:#1d4ed8;
+}
+:root[data-theme="dark"]{
+  --fg:#e9e6e2; --bg:#191817; --muted:#9c9791; --line:#3b3835;
+  --accent:#e2895b; --accent-soft:rgba(226,137,91,.11); --panel:rgba(255,255,255,.025); --net:#93c5fd;
+}
+html{background:var(--bg)}
+body{
+  margin:0 auto; padding:48px 24px 96px; max-width:900px;
+  background:var(--bg); color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Segoe UI",system-ui,sans-serif;
+  font-size:16px; line-height:1.75; letter-spacing:-.003em;
+}
+h1{font-size:1.7rem; line-height:1.35; margin:0 0 20px; letter-spacing:-.02em}
+h2{font-size:1.2rem; margin:56px 0 12px; letter-spacing:-.015em}
+h3{font-size:1.02rem; margin:34px 0 8px; font-weight:600}
+p{margin:0 0 14px}
+a{color:inherit; text-decoration:underline; text-underline-offset:2px; text-decoration-color:var(--line)}
+a:hover{text-decoration-color:var(--accent)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.86em;
+  background:var(--panel); border:1px solid var(--line); border-radius:3px; padding:.05em .35em}
+.meta{border:1px solid var(--line); border-radius:6px; padding:14px 18px; margin:0 0 28px;
+  background:var(--panel); font-size:.87rem; line-height:1.7; color:var(--muted)}
+.meta b{color:var(--fg); font-weight:600}
+figure svg text:not([fill]){fill:currentColor}
+.legend{display:flex; flex-wrap:wrap; gap:18px; margin:12px 0 0; color:var(--muted); font-size:.82rem}
+.legend span{display:flex; align-items:center; gap:7px}
+.sw{width:26px; height:0; border-top:2px solid currentColor; display:inline-block}
+.gatechip{color:var(--accent); font-weight:700}
+.note{border-left:2px solid var(--accent); background:var(--accent-soft);
+  padding:12px 16px; margin:18px 0; font-size:.92rem; border-radius:0 4px 4px 0}
+figure{margin:28px 0 12px; padding:0}
+figure svg{display:block; width:100%; max-width:100%; height:auto; color:var(--fg); overflow:visible}
+figcaption{margin-top:14px; font-size:.86rem; line-height:1.65; color:var(--muted)}
+figcaption b{color:var(--fg)}
+table{border-collapse:collapse; width:100%; font-size:.87rem; margin:16px 0 8px; display:block; overflow-x:auto}
+th,td{border-bottom:1px solid var(--line); padding:8px 12px; text-align:left; vertical-align:top}
+th{font-weight:600; color:var(--muted); font-size:.81rem; white-space:nowrap}
+td:first-child{white-space:nowrap}
+ul,ol{margin:0 0 14px; padding-left:22px}
+li{margin:0 0 7px}
+hr{border:0; border-top:1px solid var(--line); margin:48px 0}
+.grade{font-size:.78rem; color:var(--muted); border:1px solid var(--line);
+  border-radius:10px; padding:1px 8px; white-space:nowrap}
+.src{font-size:.84rem; color:var(--muted)}
+
+/* --- 분할본 추가 --- */
+nav.docnav{margin:0 0 26px; padding:10px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  font-size:.9rem; display:flex; flex-wrap:wrap; gap:4px 14px}
+nav.docnav b{color:var(--accent)}
+p.related{margin-top:40px; padding-top:16px; border-top:1px solid var(--line); font-size:.88rem; color:var(--muted)}
+.filehead{font-size:.88rem; color:var(--muted); line-height:1.75; margin:0 0 22px}
+.filehead b{color:var(--fg)}
