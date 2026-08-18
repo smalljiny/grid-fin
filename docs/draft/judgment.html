@@ -15,16 +15,16 @@
 <div class="filehead">
 <b>최초 작성</b> 2026-08-09 (분할) · <b>내용의 최초 작성</b> 2026-08-06 · <b>최종 수정</b> 2026-08-13<br>
 <b>성격</b> 설계 드래프트 — <b>확정이 아니다</b> · <b>상태</b> v4<br>
-<b>이 문서가 담는 것</b> — 판정 형태와 <b>어댑터</b>, <b>게이트와 검토가 도는 단계</b>, 판정 4상태, 예외 경로 둘.<br>
+<b>이 문서가 담는 것</b> — 판정 형태와 <b>어댑터</b>, <b>게이트와 검토가 실행되는 단계</b>, 판정 4상태, 예외 경로 2개.<br>
 <b>미결은 여기서 관리하지 않는다</b> — <a href="open-questions.md">원장</a>이 원본이고, 이 문서는 필요한 곳에서 ID를 인용한다.
 </div>
 <h2 id="5">5. 판정 — 무엇이 통과를 정하는가</h2>
 
-<p>이 축이 답하는 것은 셋이다 — <b>무엇을 기준으로 판정하는가</b>(형태와 어댑터) ·
-<b>어디서 판정하는가</b>(게이트와 검토가 도는 단계) · <b>결과를 어떻게 표현하는가</b>(4상태).</p>
+<p>이 축이 답하는 것은 3개다 — <b>무엇을 기준으로 판정하는가</b>(형태와 어댑터) ·
+<b>어디서 판정하는가</b>(게이트와 검토가 실행되는 단계) · <b>결과를 어떻게 표현하는가</b>(4상태).</p>
 
 <h3 id="5-1">5-1. <code>type</code>과 판정 형태 — 둘 다 <code>task</code>에 붙는다</h3>
-<p><b><code>type</code>은 <code>task</code>에 붙고, 하는 일은 어댑터를 고르는 것이다.</b> 그리고 <b>판정 형태는 셋</b>이라 <code>red</code>/<code>green</code>으로는 다 담기지 않는다.</p>
+<p><b><code>type</code>은 <code>task</code>에 붙고, 하는 일은 어댑터를 고르는 것이다.</b> 그리고 <b>판정 형태는 3개</b>이라 <code>red</code>/<code>green</code>으로는 다 담기지 않는다.</p>
 
 
 <h4 style="font-size:.96rem; margin:24px 0 8px; font-weight:600">(가) <code>type</code>은 <code>story</code>가 아니라 <code>task</code>에</h4>
@@ -42,12 +42,12 @@
 <code>task</code>에 두면 <b>story는 수직으로 남고 커밋은 단일 성격</b>이 된다.
 </div>
 
-<p><b><code>type</code>은 상태도 계층도 아니다.</b> 하는 일은 둘뿐이다 — <b>검증 명령을 어디서 읽는가</b>와
+<p><b><code>type</code>은 상태도 계층도 아니다.</b> 하는 일은 2개뿐이다 — <b>검증 명령을 어디서 읽는가</b>와
 <b>변경 후 기대 방향이 무엇인가</b>. <a href="#5-3">§5-3</a>의 선언 설정이 <i>언어 × 검사</i>로 도구를 고르는 것과 <b>같은 기제이고, 같은 파일에 산다</b> — P7의 <i>규칙은 모델 지시가 아니라 훅·설정·권한으로 표현한다</i>가 여기 적용된 형태다.</p>
 
 <div class="note">
-<b><code>type</code>은 어댑터를 고르는 키다 — 참고 하네스는 다섯 중 <code>tdd</code>에만 red/green을 걸었다.</b>
-그것을 <code>baseline</code>/<code>verified</code>로 일반화한 것(원장 T2 — <b>판정 형태가 셋이고 공통분모는 “변경 전 기준선 기록”이다</b>)이 <b>모든 타입이 같은 방법으로 판정된다는 뜻은 아니다.</b>
+<b><code>type</code>은 어댑터를 고르는 키다 — 참고 하네스는 5개 중 <code>tdd</code>에만 red/green을 걸었다.</b>
+그것을 <code>baseline</code>/<code>verified</code>로 일반화한 것(원장 T2 — <b>판정 형태가 3개고 공통분모는 “변경 전 기준선 기록”이다</b>)이 <b>모든 타입이 같은 방법으로 판정된다는 뜻은 아니다.</b>
 <b>어댑터가 고르는 것은 「무엇으로 기준선을 잡는가」이지 「기준선을 잡는가 마는가」가 아니다.</b>
 </div>
 
@@ -56,21 +56,21 @@
 <tbody>
 <tr><td><code>tdd</code></td><td>테스트 실행 결과</td><td>실패 → 통과 (<b>추가</b>)</td><td>—</td></tr>
 <tr><td><code>config</code></td><td>요청·응답(<code>curl</code> 등)</td><td>404 → 200 (<b>추가</b>) · 통과 유지 (<b>유지</b>)</td>
-    <td><b>망가져도 되는 환경</b></td></tr>
+ <td><b>망가져도 되는 환경</b></td></tr>
 <tr><td><code>infra</code></td><td>프로비저닝 후 상태 조회</td><td>부재 → 존재</td><td><b>격리 환경</b></td></tr>
 <tr><td><code>prompt</code></td><td><b>스킬이 선언한 조건 목록</b> — 능력을 보강하는 스킬만 <b>스킬 없이 돌린 결과</b></td>
-    <td><b>성립 유지</b> (<b>유지</b>) · 능력 보강형은 <b>불성립 → 성립</b> (<b>추가</b>)</td>
-    <td><b>실제 실행 기록</b> — 별도 환경이 아니다</td></tr>
+ <td><b>성립 유지</b> (<b>유지</b>) · 능력 보강형은 <b>불성립 → 성립</b> (<b>추가</b>)</td>
+ <td><b>실제 실행 기록</b> — 별도 환경이 아니다</td></tr>
 <tr><td><code>refactor</code></td><td>기존 검증 전부</td><td><b>통과 → 통과 유지</b> (<b>유지</b>)</td><td>—</td></tr>
 </tbody>
 </table>
 
-<p><b>판정 형태 셋(<a href="#5-1">§5-1</a> 나)이 이 표의 「기대 방향」 열이다</b> — 셋은 어댑터를 대체하지 않고 <b>어댑터의 인자</b>다.
+<p><b>판정 형태 셋(<a href="#5-1">§5-1</a> 나)이 이 표의 「기대 방향」 열이다</b> — 3개은 어댑터를 대체하지 않고 <b>어댑터의 인자</b>다.
 <code>requires</code>가 <b>환경</b>인 두 타입(<code>config</code>·<code>infra</code>)만 <b>환경 부재 비용</b>을 진다 — <b>환경이 없을 때 그것을 결직접 셀지, 그 비용이 첫 <code>story</code>로 흡수되는지가 미측정이다</b>(원장 Q12).</p>
 
 <p><b><code>prompt</code>의 기준선은 점수가 아니다</b>(원장 Q37, 2026-08-13). <b>스킬 파일이 「이 스킬이 보장하는 확인 가능한 조건」을 선언하고</b>, 그것이 곧 기준선이자 검사 목록이다 —
 예: <i>커밋 메시지에 이슈 번호가 있다</i> · <i>리뷰 기록 커밋이 있다</i> · <i>계획 문서가 작업 브랜치에 있다</i>.
-<b>검증은 다음 실제 실행의 산출물에 대해 돈다</b> — 커밋 · PR · 기록이 이미 남으므로 <b>확인할 실행 기록이 부산물로 생기고, 별도 평가 실행을 만들지 않는다.</b>
+<b>검증은 다음 실제 실행의 산출물을 대상으로 실행된다</b> — 커밋 · PR · 기록이 이미 남으므로 <b>확인할 실행 기록이 부산물로 생기고, 별도 평가 실행을 만들지 않는다.</b>
 스킬을 고치는 커밋 시점에는 아직 관측이 없으므로 <b>「미검증(이유: 다음 실행에서 관측)」</b>이고, <b>이는 첫 <code>story</code>의 커버리지가 하는 것과 같은 형태다</b>(<a href="#5-3">§5-3</a>) — <b>새 기제가 늘지 않는다.</b></p>
 
 <p><b>이 기준선이 성립하는 이유는 비대칭이다.</b> 실행은 비결정적이지만 <b>검사는 결정적이다</b> —
@@ -78,13 +78,13 @@
 <b>그래서 1회 실패는 회귀로 판정하고, 1회 통과는 회귀가 없다는 약한 증거로만 받는다.</b>
 <b>「1회 비교는 29.3%가 순위를 틀린다」는 실측은 「둘 중 어느 쪽이 나은가」에 붙는 것이지 「이번 실행에서 이 조건이 성립했나」에 붙지 않는다</b>(<a href="../research/evaluation.md">평가 조사 §1.6.4</a>). 점수 비교를 하지 않기로 한 결정과 어긋나지 않는 것도 같은 이유다.</p>
 
-<p><b>대가 셋을 적어 둔다.</b>
+<p><b>대가 3개를 적어 둔다.</b>
 ① <b>선언할 수 있는 조건은 스킬이 실제로 강제하는 것의 일부다</b> — <i>이슈 번호가 있다</i>는 확인되지만 <i>계획을 잘 세웠다</i>는 확인되지 않는다. <b>나머지는 계속 미검증으로 남는다.</b>
-② <b>조건의 개수는 보장이 아니다</b> — 커밋 시점에 <i>목록이 줄지 않았나</i>를 보면 <b>삭제는 잡히지만 약화는 잡히지 않는다.</b> 셋을 유지한 채 셋 다 속을 비울 수 있다.
+② <b>조건의 개수는 보장이 아니다</b> — 커밋 시점에 <i>목록이 줄지 않았나</i>를 보면 <b>삭제는 잡히지만 약화는 잡히지 않는다.</b> 3개를 유지한 채 셋 다 속을 비울 수 있다.
 ③ <b>판정이 다음 실행으로 밀린다</b> — 스킬을 고치는 커밋 자체는 막지 못한다.
 <b>셋 다 설계 판단이고 실측이 아니다</b> — <a href="#5-2">§5-2</a>의 경계 둘은 훅 실측에서 나왔지만 이것은 추론이다.</p>
 
-<h4 style="font-size:.96rem; margin:28px 0 8px; font-weight:600">(나) 판정 형태가 셋이다 — 그래서 <code>red</code>가 아니라 <code>baseline</code>이다</h4>
+<h4 style="font-size:.96rem; margin:28px 0 8px; font-weight:600">(나) 판정 형태가 3개다 — 그래서 <code>red</code>가 아니라 <code>baseline</code>이다</h4>
 
 <table>
 <thead><tr><th>작업</th><th>변경 전</th><th>변경 후</th><th>예</th></tr></thead>
@@ -96,7 +96,7 @@
 </table>
 
 <p><b>두 번째에는 <code>red</code>가 없는 것이 정상이다</b> — 변경 전에도 통과해야 맞다.
-셋에 공통인 것은 하나뿐이다: <b>변경하기 전에 검증을 한 번 돌려 결과를 기록한다.</b>
+3개에 공통인 것은 하나뿐이다: <b>변경하기 전에 검증을 한 번 실행해 결과를 기록한다.</b>
 그것이 동시에 두 가지를 준다 — <i>검증이 실행 가능하다</i>와 <i>지금 무엇을 잡고 있는지 안다</i>.</p>
 
 <div class="note">
@@ -107,10 +107,10 @@
 그 어휘에 매달릴 근거가 약하다. <b>되돌리려면 이름 두 개만 바꾸면 된다.</b>
 </div>
 
-<h3 id="5-2">5-2. 게이트와 리뷰의 배치 — 검토 다섯 단계 × 차단 형태 넷</h3>
+<h3 id="5-2">5-2. 게이트와 리뷰의 배치 — 검토 5개 단계 × 차단 형태 4개</h3>
 
-<p><b>계산적 검사의 경계는 둘, 검토가 도는 단계는 다섯, 차단 형태는 넷이다.</b>
-경계가 둘인 것은 <b>검사가 필요로 하는 상태가 둘이기 때문</b>이고 —
+<p><b>계산적 검사의 경계는 2개, 검토가 실행되는 단계는 5개, 차단 형태는 4개다.</b>
+경계가 2개인 것은 <b>검사가 필요로 하는 상태가 2개이기 때문</b>이고 —
 <b>쓸 내용만으로 판정되는 것</b>은 쓰기 직전, <b>쓰기 후 트리 전체가 필요한 것</b>은 커밋 경계 —
 어느 단계에 걸고 어떤 형태로 할지는 <b>되돌림 비용과 판정 가능성</b>이 정한다.</p>
 
@@ -123,57 +123,57 @@ D3은 검사 도구의 <b>모드</b>(<code>file</code>/<code>project</code>)로 
 훅을 실측하니 그 기준으로는 어느 경계인지 정해지지 않는다. <b>타입 검사는 <code>file</code> 모드로 부를 수 있어도
 쓰기 직전에는 판정되지 않는다</b> — 쓸 내용은 아직 디스크에 없고 나머지 트리는 옛 상태이기 때문이다.
 <b>어느 경계인지 정하는 것은 도구의 모드가 아니라 「판정에 쓰기 후 상태가 필요한가」다.</b>
-경계가 둘이라는 D3의 결론은 그대로이고, <b>무엇이 어느 쪽에 가는지가 달라졌다.</b>
+경계가 2개라는 D3의 결론은 그대로이고, <b>무엇이 어느 쪽에 가는지가 달라졌다.</b>
 </div>
 
 <figure>
 <svg viewBox="0 0 840 306" role="img" aria-label="게이트 세 곳. 쓸 내용만으로 판정되는 계산적 검사는 쓰기 직전에 차단하고, 쓰기 후 트리가 필요한 계산적 검사는 커밋 경계에서 차단하며, 추론적 검토 중 진행을 판정하지 않는 것은 통합 경계를 넘어 통합 후에 놓인다. 다만 커밋 경계에도 코드 검토가 붙어 고칠 수 있는 것은 고치고 못 고치는 것만 멈춘다. 포맷은 어디서도 차단하지 않고 쓴 뒤 교정한다.">
-  <defs>
-    <marker id="d2a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
-    </marker>
-  </defs>
-  <line x1="558" y1="14" x2="558" y2="250" stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="6 5"/>
-  <text x="566" y="26" font-size="11.5" fill="var(--accent)">통합 경계 — 여기부터 L3</text>
+ <defs>
+ <marker id="d2a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+ <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+ </marker>
+ </defs>
+ <line x1="558" y1="14" x2="558" y2="250" stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="6 5"/>
+ <text x="566" y="26" font-size="11.5" fill="var(--accent)">통합 경계 — 여기부터 L3</text>
 
-  <g stroke="currentColor" stroke-width="1.2" fill="none">
-    <rect x="16"  y="40" width="250" height="60" rx="5"/>
-    <rect x="290" y="40" width="250" height="60" rx="5"/>
-  </g>
-  <rect x="600" y="40" width="220" height="60" rx="5" fill="none"
-        stroke="var(--accent)" stroke-width="1.3" stroke-dasharray="6 4"/>
-  <g text-anchor="middle">
-    <text x="141" y="66" font-size="13" fill="currentColor">계산적 검사 · 쓰기 전 판정 가능</text>
-    <text x="141" y="86" font-size="11" fill="currentColor" fill-opacity=".72">파일 경계 · 금지 패턴 · 시크릿</text>
-    <text x="415" y="66" font-size="13" fill="currentColor">계산적 검사 · 쓰기 후 상태 필요</text>
-    <text x="415" y="86" font-size="11" fill="currentColor" fill-opacity=".72">빌드 · 타입 · 린트 · 순환 · 커버리지 · 테스트</text>
-    <text x="710" y="66" font-size="13" fill="var(--accent)">추론적 리뷰</text>
-    <text x="710" y="86" font-size="11" fill="var(--accent)">LLM · 교차 모델</text>
-  </g>
-  <g stroke="currentColor" stroke-width="1.2" marker-end="url(#d2a)">
-    <line x1="266" y1="70" x2="286" y2="70"/>
-    <line x1="540" y1="70" x2="596" y2="70"/>
-  </g>
-  <g font-size="11.5" text-anchor="middle" fill="currentColor">
-    <text x="141" y="140">쓰기 직전 <tspan font-family="ui-monospace,Menlo,monospace">PreToolUse</tspan></text>
-    <text x="415" y="140">커밋 경계 (<tspan font-family="ui-monospace,Menlo,monospace">task</tspan>)</text>
-    <text x="710" y="140" fill="var(--accent)">머지 이후 (<tspan font-family="ui-monospace,Menlo,monospace">story</tspan>)</text>
-    <text x="141" y="176" font-weight="600">차단한다</text>
-    <text x="415" y="176" font-weight="600">차단한다</text>
-    <text x="710" y="176" font-weight="600" fill="var(--accent)">차단하지 않는다</text>
-    <text x="141" y="212" fill-opacity=".75">허용 오탐 0%</text>
-    <text x="415" y="212" fill-opacity=".75">허용 오탐 0%</text>
-    <text x="710" y="212" fill="var(--accent)" fill-opacity=".9">허용 오탐 ≤ 임계</text>
-    <text x="141" y="240" fill-opacity=".6" font-size="10.5">쓸 내용만으로 판정된다</text>
-    <text x="415" y="240" fill-opacity=".6" font-size="10.5">쓰고 난 트리가 필요하다</text>
-    <text x="710" y="240" fill="var(--accent)" fill-opacity=".75" font-size="10.5">초과하면 끈다</text>
-  </g>
-  <line x1="16" y1="262" x2="540" y2="262" stroke="currentColor" stroke-width="1" stroke-opacity=".28"/>
-  <g font-size="11" fill="currentColor" fill-opacity=".8">
-    <text x="16" y="284">포맷은 이 줄에 없다 — <tspan font-weight="600">차단하지 않고 쓴 뒤 교정한다</tspan>
-      (<tspan font-family="ui-monospace,Menlo,monospace">PostToolUse</tspan>).</text>
-    <text x="16" y="300">고칠 수 있는 것을 막으면 왕복만 쓴다.</text>
-  </g>
+ <g stroke="currentColor" stroke-width="1.2" fill="none">
+ <rect x="16" y="40" width="250" height="60" rx="5"/>
+ <rect x="290" y="40" width="250" height="60" rx="5"/>
+ </g>
+ <rect x="600" y="40" width="220" height="60" rx="5" fill="none"
+ stroke="var(--accent)" stroke-width="1.3" stroke-dasharray="6 4"/>
+ <g text-anchor="middle">
+ <text x="141" y="66" font-size="13" fill="currentColor">계산적 검사 · 쓰기 전 판정 가능</text>
+ <text x="141" y="86" font-size="11" fill="currentColor" fill-opacity=".72">파일 경계 · 금지 패턴 · 시크릿</text>
+ <text x="415" y="66" font-size="13" fill="currentColor">계산적 검사 · 쓰기 후 상태 필요</text>
+ <text x="415" y="86" font-size="11" fill="currentColor" fill-opacity=".72">빌드 · 타입 · 린트 · 순환 · 커버리지 · 테스트</text>
+ <text x="710" y="66" font-size="13" fill="var(--accent)">추론적 리뷰</text>
+ <text x="710" y="86" font-size="11" fill="var(--accent)">LLM · 교차 모델</text>
+ </g>
+ <g stroke="currentColor" stroke-width="1.2" marker-end="url(#d2a)">
+ <line x1="266" y1="70" x2="286" y2="70"/>
+ <line x1="540" y1="70" x2="596" y2="70"/>
+ </g>
+ <g font-size="11.5" text-anchor="middle" fill="currentColor">
+ <text x="141" y="140">쓰기 직전 <tspan font-family="ui-monospace,Menlo,monospace">PreToolUse</tspan></text>
+ <text x="415" y="140">커밋 경계 (<tspan font-family="ui-monospace,Menlo,monospace">task</tspan>)</text>
+ <text x="710" y="140" fill="var(--accent)">머지 이후 (<tspan font-family="ui-monospace,Menlo,monospace">story</tspan>)</text>
+ <text x="141" y="176" font-weight="600">차단한다</text>
+ <text x="415" y="176" font-weight="600">차단한다</text>
+ <text x="710" y="176" font-weight="600" fill="var(--accent)">차단하지 않는다</text>
+ <text x="141" y="212" fill-opacity=".75">허용 오탐 0%</text>
+ <text x="415" y="212" fill-opacity=".75">허용 오탐 0%</text>
+ <text x="710" y="212" fill="var(--accent)" fill-opacity=".9">허용 오탐 ≤ 임계</text>
+ <text x="141" y="240" fill-opacity=".6" font-size="10.5">쓸 내용만으로 판정된다</text>
+ <text x="415" y="240" fill-opacity=".6" font-size="10.5">쓰고 난 트리가 필요하다</text>
+ <text x="710" y="240" fill="var(--accent)" fill-opacity=".75" font-size="10.5">초과하면 끈다</text>
+ </g>
+ <line x1="16" y1="262" x2="540" y2="262" stroke="currentColor" stroke-width="1" stroke-opacity=".28"/>
+ <g font-size="11" fill="currentColor" fill-opacity=".8">
+ <text x="16" y="284">포맷은 이 줄에 없다 — <tspan font-weight="600">차단하지 않고 쓴 뒤 교정한다</tspan>
+ (<tspan font-family="ui-monospace,Menlo,monospace">PostToolUse</tspan>).</text>
+ <text x="16" y="300">고칠 수 있는 것을 막으면 왕복만 쓴다.</text>
+ </g>
 </svg>
 <figcaption>
 <b>차단하는 것은 통합 경계 왼쪽에만 있다.</b> Google의 기준이 두 계층을 가른다 —
@@ -184,7 +184,7 @@ D3은 검사 도구의 <b>모드</b>(<code>file</code>/<code>project</code>)로 
 </figcaption>
 </figure>
 
-<h4 style="font-size:.96rem; margin:30px 0 8px; font-weight:600">쓰기 경계에서 무엇이 차단되는가 — 훅 실측 여섯</h4>
+<h4 style="font-size:.96rem; margin:30px 0 8px; font-weight:600">쓰기 경계에서 무엇이 차단되는가 — 훅 실측 6개</h4>
 
 <p><b>이 배치는 추론이 아니라 실측이다.</b> 훅 종료 규약과 입력 형태를 직접 재서 정했다
 (2026-08-09, <code>claude -p</code> · 스크래치 프로젝트 · Claude Code 2.1.226).</p>
@@ -193,25 +193,25 @@ D3은 검사 도구의 <b>모드</b>(<code>file</code>/<code>project</code>)로 
 <thead><tr><th>#</th><th>잰 것</th><th>결과</th><th>무엇을 정하나</th></tr></thead>
 <tbody>
 <tr><td><b>1</b></td><td><code>PreToolUse</code> <b>종료 코드 2</b></td>
-    <td><b>파일이 생기지 않았고</b> <code>stderr</code>가 모델에게 전달됐다</td>
-    <td><b>쓰기 경계의 차단이 성립한다</b></td></tr>
+ <td><b>파일이 생기지 않았고</b> <code>stderr</code>가 모델에게 전달됐다</td>
+ <td><b>쓰기 경계의 차단이 성립한다</b></td></tr>
 <tr><td><b>2</b></td><td><code>PreToolUse</code>가 받는 것</td>
-    <td><code>tool_input</code>에 <code>file_path</code>와 <b><code>content</code> 전문</b>이 온다</td>
-    <td><b>경로와 내용으로 판정되는 검사는 쓰기 직전에 가능하다</b></td></tr>
+ <td><code>tool_input</code>에 <code>file_path</code>와 <b><code>content</code> 전문</b>이 온다</td>
+ <td><b>경로와 내용으로 판정되는 검사는 쓰기 직전에 가능하다</b></td></tr>
 <tr><td><b>3</b></td><td><code>PostToolUse</code> <b>종료 코드 2</b></td>
-    <td><b>파일은 이미 쓰였다.</b> <code>stderr</code>는 전달된다</td>
-    <td><b>차단이 아니라 교정 요청이다</b> — 되돌리는 것은 모델의 몫</td></tr>
+ <td><b>파일은 이미 쓰였다.</b> <code>stderr</code>는 전달된다</td>
+ <td><b>차단이 아니라 교정 요청이다</b> — 되돌리는 것은 모델의 몫</td></tr>
 <tr><td><b>4</b></td><td>종료 코드 <b>0</b> + <code>stderr</code> 경고</td>
-    <td><b>모델에게 도달하지 않는다</b> — 모델은 “경고 없음”이라 답했다</td>
-    <td><b>배선이 있어도 신호가 버려질 수 있다</b>(<a href="overview.html#1-1">§1-1</a> 일곱째).
-        <b>실측 6과 함께 읽어야 한다 — 죽는 것은 <code>stderr</code>이지 종료 코드 0이 아니다</b></td></tr>
+ <td><b>모델에게 도달하지 않는다</b> — 모델은 “경고 없음”이라 답했다</td>
+ <td><b>등록이 있어도 신호가 버려질 수 있다</b>(<a href="overview.html#1-1">§1-1</a> 일곱째).
+ <b>실측 6과 함께 읽어야 한다 — 죽는 것은 <code>stderr</code>이지 종료 코드 0이 아니다</b></td></tr>
 <tr><td><b>5</b></td><td><code>PreToolUse</code>의 <code>updatedInput</code></td>
-    <td><b>훅이 쓸 내용을 바꿔 썼다.</b> 디스크는 바뀐 내용, <b>모델은 자기가 쓴 내용을 그대로 안다</b></td>
-    <td><b>쓰기 전 교정은 가능하나 조용하다</b> — 그래서 쓰지 않는다</td></tr>
+ <td><b>훅이 쓸 내용을 바꿔 썼다.</b> 디스크는 바뀐 내용, <b>모델은 자기가 쓴 내용을 그대로 안다</b></td>
+ <td><b>쓰기 전 교정은 가능하나 조용하다</b> — 그래서 쓰지 않는다</td></tr>
 <tr><td><b>6</b></td><td><code>PostToolUse</code> <b>종료 코드 0 + stdout JSON</b></td>
-    <td><code>hookSpecificOutput.additionalContext</code>가 <b><code>system-reminder</code> 블록으로 모델에게 전달된다.</b>
-        <b><code>systemMessage</code>는 전달되지 않았다</b></td>
-    <td><b>차단하지 않고 알릴 수 있다</b> — 교정을 말하는 채널이 이것이다</td></tr>
+ <td><code>hookSpecificOutput.additionalContext</code>가 <b><code>system-reminder</code> 블록으로 모델에게 전달된다.</b>
+ <b><code>systemMessage</code>는 전달되지 않았다</b></td>
+ <td><b>차단하지 않고 알릴 수 있다</b> — 교정을 말하는 채널이 이것이다</td></tr>
 </tbody>
 </table>
 
@@ -248,39 +248,39 @@ D3은 검사 도구의 <b>모드</b>(<code>file</code>/<code>project</code>)로 
 
 <h4 style="font-size:.96rem; margin:30px 0 8px; font-weight:600">그런데 검토는 한 단계가 아니다</h4>
 
-<p>위 도해의 <b>「추론적 리뷰」는 다섯 중 마지막 하나다.</b>
+<p>위 도해의 <b>「추론적 리뷰」는 5개 중 마지막 하나다.</b>
 스펙 · 구현 계획 · <code>task</code> 코드 · <code>story</code> · PR — <b>단계마다 묻는 것이 다르고, 그래서 성격이 다르다.</b>
-다섯을 나열하면 여섯 번째가 생길 때 근거가 없으므로 <b>기준을 먼저 세운다.</b></p>
+5개를 나열하면 6개 번째가 생길 때 근거가 없으므로 <b>기준을 먼저 세운다.</b></p>
 
 <table>
 <thead><tr><th>기준</th><th>묻는 것</th><th>왜 성격을 정하나</th></tr></thead>
 <tbody>
 <tr><td><b>되돌림 비용</b></td><td>여기서 틀렸다고 하면 되돌릴 수 있나</td>
-    <td><b>되돌리기 싼 단계일수록 강하게 물어도 된다.</b> 되돌릴 수 없는 단계에서 차단해봐야 할 수 있는 것이 없다</td></tr>
+ <td><b>되돌리기 싼 단계일수록 강하게 물어도 된다.</b> 되돌릴 수 없는 단계에서 차단해봐야 할 수 있는 것이 없다</td></tr>
 <tr><td><b>판정 가능성</b></td><td>계산으로 판정되나, 판단이 필요하나</td>
-    <td>차단하려면 <b>오탐 0%</b>가 필요하다. <b>판단이 필요한 것을 하드 게이트로 강제하면 오탐을 양산하고, 그것이 (C) 유형을 제조한다</b>(1차 실측)</td></tr>
+ <td>차단하려면 <b>오탐 0%</b>가 필요하다. <b>판단이 필요한 것을 하드 게이트로 강제하면 오탐을 양산하고, 그것이 (C) 유형을 제조한다</b>(1차 실측)</td></tr>
 </tbody>
 </table>
 
-<p><b>두 기준을 조합하면 형태가 셋으로 떨어지는데, 추론 쪽이 다시 둘로 갈린다 — 넷이다.</b></p>
+<p><b>두 기준을 조합하면 형태가 3개로 떨어지는데, 추론 쪽이 다시 둘로 갈린다 — 4개다.</b></p>
 
 <table>
 <thead><tr><th>되돌리기</th><th>판정</th><th>지적을 누가 해소하나</th><th>어떻게 하나</th></tr></thead>
 <tbody>
 <tr><td>쉽다</td><td><b>기계</b></td><td>—</td><td><b>하드 차단</b> — 오탐 0%</td></tr>
 <tr><td>쉽다</td><td>판단</td><td><b>리뷰어가 직접 고친다</b></td>
-    <td><b>고치고, 못 고치는 것만 정지</b> — 반복 횟수를 세지 않는다</td></tr>
+ <td><b>고치고, 못 고치는 것만 정지</b> — 반복 횟수를 세지 않는다</td></tr>
 <tr><td>쉽다</td><td>판단</td><td><b>다시 작성해야 한다</b></td>
-    <td><b>최대 3번까지 다시 검토</b> + 루프 브레이커 — 상한에서 사람에게 넘긴다</td></tr>
+ <td><b>최대 3번까지 다시 검토</b> + 루프 브레이커 — 상한에서 사람에게 넘긴다</td></tr>
 <tr><td><b>어렵다 / 불가</b></td><td>판단</td><td>—</td>
-    <td><b>막지 않는다</b>(<b>비차단</b>) — 진행을 판정하지 않고 지적만 남긴다.
-        <br><b>다만 「알렸다」가 성립하려면 도달이 확인된 채널이어야 한다</b> — 아래</td></tr>
+ <td><b>막지 않는다</b>(<b>비차단</b>) — 진행을 판정하지 않고 지적만 남긴다.
+ <br><b>다만 「알렸다」가 성립하려면 도달이 확인된 채널이어야 한다</b> — 아래</td></tr>
 </tbody>
 </table>
 
 <div class="note warn">
 <b>셋째 기준은 참고 하네스 실측이 알려줬다 — 원래 「빈도」인 줄 알았는데 아니었다.</b>
-커밋마다 도는 검토에 <i>최대 3번</i>을 걸면 비용이 커진다고 보고 <b>「막지 않는다」로 뒀는데</b>(원장 S16 초안),
+커밋마다 실행되는 검토에 <i>최대 3번</i>을 걸면 비용이 커진다고 보고 <b>「막지 않는다」로 뒀는데</b>(원장 S16 초안),
 <b>참고 하네스를 열어 보니 커밋 단위 코드 검토가 실재했고 반복 횟수를 세지 않았다</b>(원장 S16 정정).<br><br>
 <b>갈리는 것은 지적을 리뷰어가 직접 해소할 수 있는가다.</b>
 <b>코드 지적은 고치는 방법이 지적 안에 들어 있다</b> — <i>“이 변수명이 나쁘다”</i>는 바꾸면 끝난다.
@@ -302,41 +302,41 @@ D3은 검사 도구의 <b>모드</b>(<code>file</code>/<code>project</code>)로 
 
 <div class="note">
 <b>이 기준들은 위 도해를 부정하지 않고 유도한다.</b> Fowler의 <i>계산적 = 통합 전 / 추론적 = 통합 후</i>는
-위 표의 <b>첫 줄과 넷째 줄</b>이다. <b>빠져 있던 것은 가운데 둘</b> —
+위 표의 <b>첫 줄과 넷째 줄</b>이다. <b>빠져 있던 것은 가운데 2개</b> —
 <b>되돌리기 싼데 판정에 판단이 필요한 경우</b>이고, 그 둘은 다시
 <b>지적을 리뷰어가 직접 고칠 수 있는가</b>로 갈린다 — <b>코드 검토</b>와 <b>문서 검토</b>다.
 </div>
 
-<h4 style="font-size:.96rem; margin:30px 0 8px; font-weight:600">검토 다섯 단계</h4>
+<h4 style="font-size:.96rem; margin:30px 0 8px; font-weight:600">검토 5개 단계</h4>
 
 <table>
 <thead><tr><th>#</th><th>리뷰</th><th>대상</th><th>무엇을 묻나</th><th>되돌림</th><th>차단 형태</th><th>반복되면</th></tr></thead>
 <tbody>
 <tr><td><b>1</b></td><td><b>스펙</b></td><td>이슈 본문</td><td><b>무엇을 만들 것인가가 옳은가</b></td>
-    <td><b>완전</b> — 아직 아무것도 없다</td><td>라운드 상한</td>
-    <td>범위가 틀렸거나 <code>epic</code>으로 올라가야 한다</td></tr>
+ <td><b>완전</b> — 아직 아무것도 없다</td><td>라운드 상한</td>
+ <td>범위가 틀렸거나 <code>epic</code>으로 올라가야 한다</td></tr>
 <tr><td><b>2</b></td><td><b>구현 계획</b></td><td>계획 문서</td><td><b>어떻게 쪼갤 것인가가 옳은가</b></td>
-    <td><b>완전</b> — 구현 전</td><td>라운드 상한</td>
-    <td><b>diff 있으면 분할 실패 · 없으면 (C)·(D)</b></td></tr>
+ <td><b>완전</b> — 구현 전</td><td>라운드 상한</td>
+ <td><b>diff 있으면 분할 실패 · 없으면 (C)·(D)</b></td></tr>
 <tr><td><b>3</b></td><td><code>task</code> <b>코드</b></td><td>커밋</td><td>이 커밋이 규약을 지켰나</td>
-    <td>커밋 단위(amend · rebase)</td><td><b>하드 차단</b> — <b>목록은 위 도해의 커밋 경계가 정본이다.</b><br>+ <b>추론 부분은 같은 커밋 경계에서 돌되 「고치고, 못 고치는 것만 정지」</b>(원장 S16)</td>
-    <td>규약이 없거나 참조 데이터가 낡았다</td></tr>
+ <td>커밋 단위(amend · rebase)</td><td><b>하드 차단</b> — <b>목록은 위 도해의 커밋 경계가 정본이다.</b><br>+ <b>추론 부분은 같은 커밋 경계에서 돌되 「고치고, 못 고치는 것만 정지」</b>(원장 S16)</td>
+ <td>규약이 없거나 참조 데이터가 낡았다</td></tr>
 <tr><td><b>4</b></td><td><code>story</code></td><td>브랜치 전체</td>
-    <td><b>계획대로 완결됐나 — 그리고 PR로 갈 것인가</b><br>
-        <b>사람이 셋 중 고른다</b>: <b>통과 → <code>reviewed</code></b>(= PR로 갈 수 있는 조건) / <b>ⓐ 수정해서 진행 → <code>baseline</code></b> / <b>ⓑ 스펙부터 다시 → <code>proposed</code></b>.
-        감당 가능한 부채는 <b>별도 이슈로 등록하고 통과</b></td>
-    <td>머지 전이면 가능 — <b>「스펙부터 다시」가 실제로 가능한 유일한 단계</b>. <b>여기를 통과하지 않으면 PR로 갈 수 없다</b>. 그리고 <b>판정은 HEAD에 묶인다</b> — 판정 후 코드가 바뀌면 무효다</td>
-    <td>라운드 상한 · <b>자동으로 되돌리지 않는다</b></td>
-    <td><b>ⓑ가 반복되면 <code>story</code> 설계 문제</b> — <code>epic</code> 승격 신호</td></tr>
+ <td><b>계획대로 완결됐나 — 그리고 PR로 갈 것인가</b><br>
+ <b>사람이 셋 중 고른다</b>: <b>통과 → <code>reviewed</code></b>(= PR로 갈 수 있는 조건) / <b>ⓐ 수정해서 진행 → <code>baseline</code></b> / <b>ⓑ 스펙부터 다시 → <code>proposed</code></b>.
+ 감당 가능한 부채는 <b>별도 이슈로 등록하고 통과</b></td>
+ <td>머지 전이면 가능 — <b>「스펙부터 다시」가 실제로 가능한 유일한 단계</b>. <b>여기를 통과하지 않으면 PR로 갈 수 없다</b>. 그리고 <b>판정은 HEAD에 묶인다</b> — 판정 후 코드가 바뀌면 무효다</td>
+ <td>라운드 상한 · <b>자동으로 되돌리지 않는다</b></td>
+ <td><b>ⓑ가 반복되면 <code>story</code> 설계 문제</b> — <code>epic</code> 승격 신호</td></tr>
 <tr><td><b>5</b></td><td><b>PR</b></td><td>통합 대상 diff</td><td><b>통합해도 되나</b> — 외부 기준</td>
-    <td><b>마지막 되돌림 지점</b></td><td>라운드 상한</td><td>—</td></tr>
+ <td><b>마지막 되돌림 지점</b></td><td>라운드 상한</td><td>—</td></tr>
 <tr><td><i>5′</i></td><td><i>통합 후</i></td><td>머지된 변경</td>
-    <td>무엇을 배웠나 — <b>진행 판정은 하지 않는다</b></td>
-    <td><b>불가</b></td><td><b>비차단</b></td><td>별도 이슈 + L3 계수기</td></tr>
+ <td>무엇을 배웠나 — <b>진행 판정은 하지 않는다</b></td>
+ <td><b>불가</b></td><td><b>비차단</b></td><td>별도 이슈 + L3 계수기</td></tr>
 </tbody>
 </table>
 
-<p><b>되돌림 비용이 위에서 아래로 단조 증가한다</b> — 그것이 다섯이 순서를 갖는 이유다.
+<p><b>되돌림 비용이 위에서 아래로 단조 증가한다</b> — 그것이 5개가 순서를 갖는 이유다.
 그리고 <b>1·2가 가장 값싼 단계인데 <a href="flow.html#6-1">§6-1</a>의 단계표에 없었다</b> — <b>그래서 ③′·④′로 넣었다</b>(원장 S13).</p>
 
 <div class="note">
@@ -375,75 +375,75 @@ D3은 검사 도구의 <b>모드</b>(<code>file</code>/<code>project</code>)로 
 <b>㉢ 3번만 성격이 섞인다.</b> <code>task</code> 코드에는 <b>계산적 부분</b>(하드 차단)과
 <b>추론적 부분</b>(가독성·설계 — <b>고치고, 못 고치는 것만 정지</b>)이 함께 있다.
 경계는 이미 커밋 경계로 그어져 있으므로 남는 것은
-<b>추론적 부분을 어디서 돌릴 것인가</b>였고, <b>커밋 경계로 정했다</b>(원장 S16). <b>방금 쓴 코드라 고칠 컨텍스트가 살아 있고</b>, ⑤′로 미루면 <b>거기서 나온 코드 지적을 고치는 순간 <code>reviewed</code>가 무효가 되어 루프가 한 번 더 돈다</b>(<a href="flow.html#6-3">§6-3</a>의 가드 ㉡). <b>차단하지 않으므로 전달은 종료 코드 0 + <code>additionalContext</code>로 한다</b>(실측 6).
+<b>추론적 부분을 어디서 돌릴 것인가</b>였고, <b>커밋 경계로 정했다</b>(원장 S16). <b>방금 쓴 코드라 고칠 컨텍스트가 살아 있고</b>, ⑤′로 미루면 <b>거기서 나온 코드 지적을 고치는 순간 <code>reviewed</code>가 무효가 되어 루프가 한 번 더 실행된다</b>(<a href="flow.html#6-3">§6-3</a>의 가드 ㉡). <b>차단하지 않으므로 전달은 종료 코드 0 + <code>additionalContext</code>로 한다</b>(실측 6).
 </div>
 
 <h3 id="5-3">5-3. 계산적 게이트의 내부 — 판정은 네 상태다</h3>
-<p><b>어댑터가 무엇을 돌리든 바깥에서 보이는 결과는 넷이다</b> — 통과·실패 / 설계상 부재 / 결손 / 미검증. <b>그 정규화가 어댑터 패턴을 안전하게 만든다.</b></p>
+<p><b>어댑터가 무엇을 돌리든 바깥에서 보이는 결과는 4개다</b> — 통과·실패 / 설계상 부재 / 결손 / 미검증. <b>그 정규화가 어댑터 패턴을 안전하게 만든다.</b></p>
 
 
 <figure>
 <svg viewBox="0 0 860 380" role="img" aria-label="계산적 게이트의 판정. 검사 요청이 선언 설정 조회를 거쳐 어댑터를 고르고, 그 결과가 통과·실패, 설계상 부재, 결손, 미검증의 네 상태 중 하나로 정규화된다. 미검증은 진행을 판정하지 않고 학습 계층으로 넘어가며, 게이트가 낼 수도 있고 검사를 아예 안 돌렸을 때도 나온다.">
-  <defs>
-    <marker id="d3a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
-    </marker>
-    <marker id="d3b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
-    </marker>
-  </defs>
-  <g stroke="currentColor" stroke-width="1.2" fill="none">
-    <rect x="20" y="160" width="150" height="52" rx="5"/>
-    <rect x="230" y="160" width="190" height="52" rx="5"/>
-  </g>
-  <g fill="currentColor" text-anchor="middle">
-    <text x="95" y="183" font-size="13">검사 요청</text>
-    <text x="95" y="201" font-size="11" fill-opacity=".7"><a href="#5-2">§5-2</a>의 두 경계에서</text>
-    <text x="325" y="183" font-size="13">선언 설정 조회</text>
-    <text x="325" y="201" font-size="11" fill-opacity=".7">언어 × 검사 · 작업 종류 × 판정</text>
-  </g>
-  <line x1="170" y1="186" x2="226" y2="186" stroke="currentColor" stroke-width="1.2" marker-end="url(#d3a)"/>
+ <defs>
+ <marker id="d3a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+ <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+ </marker>
+ <marker id="d3b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+ <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+ </marker>
+ </defs>
+ <g stroke="currentColor" stroke-width="1.2" fill="none">
+ <rect x="20" y="160" width="150" height="52" rx="5"/>
+ <rect x="230" y="160" width="190" height="52" rx="5"/>
+ </g>
+ <g fill="currentColor" text-anchor="middle">
+ <text x="95" y="183" font-size="13">검사 요청</text>
+ <text x="95" y="201" font-size="11" fill-opacity=".7"><a href="#5-2">§5-2</a>의 두 경계에서</text>
+ <text x="325" y="183" font-size="13">선언 설정 조회</text>
+ <text x="325" y="201" font-size="11" fill-opacity=".7">언어 × 검사 · 작업 종류 × 판정</text>
+ </g>
+ <line x1="170" y1="186" x2="226" y2="186" stroke="currentColor" stroke-width="1.2" marker-end="url(#d3a)"/>
 
-  <g stroke-width="1.2" fill="none" stroke="currentColor">
-    <path d="M420,186 H500"/>
-    <path d="M500,54 V294"/>
-  </g>
-  <g stroke-width="1.2" fill="none">
-    <path d="M500,54  H612" stroke="currentColor"  marker-end="url(#d3a)"/>
-    <path d="M500,134 H612" stroke="currentColor"  marker-end="url(#d3a)"/>
-    <path d="M500,214 H612" stroke="var(--accent)" marker-end="url(#d3b)"/>
-    <path d="M500,294 H612" stroke="var(--accent)" marker-end="url(#d3b)"/>
-  </g>
-  <g font-size="10.5" text-anchor="start">
-    <text x="508" y="46"  fill="currentColor" fill-opacity=".8">선언 + 설치됨</text>
-    <text x="508" y="126" fill="currentColor" fill-opacity=".8">선언: 없음(이유)</text>
-    <text x="508" y="206" fill="var(--accent)">선언됐으나 미설치</text>
-    <text x="508" y="286" fill="var(--accent)">결정적 검사 불가</text>
-  </g>
+ <g stroke-width="1.2" fill="none" stroke="currentColor">
+ <path d="M420,186 H500"/>
+ <path d="M500,54 V294"/>
+ </g>
+ <g stroke-width="1.2" fill="none">
+ <path d="M500,54 H612" stroke="currentColor" marker-end="url(#d3a)"/>
+ <path d="M500,134 H612" stroke="currentColor" marker-end="url(#d3a)"/>
+ <path d="M500,214 H612" stroke="var(--accent)" marker-end="url(#d3b)"/>
+ <path d="M500,294 H612" stroke="var(--accent)" marker-end="url(#d3b)"/>
+ </g>
+ <g font-size="10.5" text-anchor="start">
+ <text x="508" y="46" fill="currentColor" fill-opacity=".8">선언 + 설치됨</text>
+ <text x="508" y="126" fill="currentColor" fill-opacity=".8">선언: 없음(이유)</text>
+ <text x="508" y="206" fill="var(--accent)">선언됐으나 미설치</text>
+ <text x="508" y="286" fill="var(--accent)">결정적 검사 불가</text>
+ </g>
 
-  <g stroke-width="1.3" fill="none">
-    <rect x="616" y="28"  width="224" height="52" rx="5" stroke="currentColor"/>
-    <rect x="616" y="108" width="224" height="52" rx="5" stroke="currentColor"/>
-    <rect x="616" y="188" width="224" height="52" rx="5" stroke="var(--accent)"/>
-    <rect x="616" y="268" width="224" height="52" rx="5" stroke="var(--accent)" stroke-dasharray="6 4"/>
-  </g>
-  <g text-anchor="middle">
-    <text x="728" y="51" font-size="13" fill="currentColor">통과 / 실패</text>
-    <text x="728" y="69" font-size="11" fill="currentColor" fill-opacity=".7">게이트 판정이 성립</text>
-    <text x="728" y="131" font-size="13" fill="currentColor">설계상 부재</text>
-    <text x="728" y="149" font-size="11" fill="currentColor" fill-opacity=".7">정상 — 검사할 것이 없다</text>
-    <text x="728" y="211" font-size="13" fill="var(--accent)">결손</text>
-    <text x="728" y="229" font-size="11" fill="var(--accent)">실패로 낸다 — 통과가 아니다</text>
-    <text x="728" y="291" font-size="13" fill="var(--accent)">미검증 + 소견</text>
-    <text x="728" y="309" font-size="11" fill="var(--accent)">L3로 넘긴다</text>
-  </g>
-  <text x="728" y="352" font-size="11.5" fill="var(--accent)" text-anchor="middle">오늘 이 셋은 전부 “통과”처럼 보인다</text>
+ <g stroke-width="1.3" fill="none">
+ <rect x="616" y="28" width="224" height="52" rx="5" stroke="currentColor"/>
+ <rect x="616" y="108" width="224" height="52" rx="5" stroke="currentColor"/>
+ <rect x="616" y="188" width="224" height="52" rx="5" stroke="var(--accent)"/>
+ <rect x="616" y="268" width="224" height="52" rx="5" stroke="var(--accent)" stroke-dasharray="6 4"/>
+ </g>
+ <g text-anchor="middle">
+ <text x="728" y="51" font-size="13" fill="currentColor">통과 / 실패</text>
+ <text x="728" y="69" font-size="11" fill="currentColor" fill-opacity=".7">게이트 판정이 성립</text>
+ <text x="728" y="131" font-size="13" fill="currentColor">설계상 부재</text>
+ <text x="728" y="149" font-size="11" fill="currentColor" fill-opacity=".7">정상 — 검사할 것이 없다</text>
+ <text x="728" y="211" font-size="13" fill="var(--accent)">결손</text>
+ <text x="728" y="229" font-size="11" fill="var(--accent)">실패로 낸다 — 통과가 아니다</text>
+ <text x="728" y="291" font-size="13" fill="var(--accent)">미검증 + 소견</text>
+ <text x="728" y="309" font-size="11" fill="var(--accent)">L3로 넘긴다</text>
+ </g>
+ <text x="728" y="352" font-size="11.5" fill="var(--accent)" text-anchor="middle">오늘 이 3개은 전부 “통과”처럼 보인다</text>
 </svg>
 <figcaption>
 <b>“설계상 부재”는 선언 설정에 <code>없음(이유)</code>이 적혀 있을 때만 성립하고, 그 밖의 부재는 전부 결손이다.</b>
 예: Go의 패키지 순환은 툴체인이 거부하므로 <code>없음(툴체인이 흡수)</code>이 정상이고,
 TS에 <code>dependency-cruiser</code>가 선언됐는데 없으면 결손이다.
-<b>미검증은 진행을 판정하지 않고 L3로 넘긴다</b> — 파선은 그 뜻이다.<br><b>⚠ 2026-08-09 정정</b> — 이 설명은 원래 <i>“미검증은 <b>계산적 게이트의 출력이 아니라</b> L3로 넘기는 표식”</i>이라고 적었다. <b>커버리지가 그것을 깼다</b> — 첫 <code>story</code>에는 비교할 기준선이 없어 <b>검사가 돌고 값을 얻었는데도 판정이 안 난다</b>(원장 S17). <b>게이트도 미검증을 낸다.</b> 파선의 뜻은 <b>「게이트 밖」이 아니라 「진행을 판정하지 않는다」</b>로 읽는다.
+<b>미검증은 진행을 판정하지 않고 L3로 넘긴다</b> — 파선은 그 뜻이다.<br><b>⚠ 2026-08-09 정정</b> — 이 설명은 원래 <i>“미검증은 <b>계산적 게이트의 출력이 아니라</b> L3로 넘기는 표식”</i>이라고 적었다. <b>커버리지가 그것을 깼다</b> — 첫 <code>story</code>에는 비교할 기준선이 없어 <b>검사가 실행되고 값을 얻었는데도 판정이 안 난다</b>(원장 S17). <b>게이트도 미검증을 낸다.</b> 파선의 뜻은 <b>「게이트 밖」이 아니라 「진행을 판정하지 않는다」</b>로 읽는다.
 </figcaption>
 </figure>
 
@@ -451,30 +451,30 @@ TS에 <code>dependency-cruiser</code>가 선언됐는데 없으면 결손이다.
 <b>「미검증」은 두 상황을 덮는다 — 그래서 이유를 함께 적는다.</b>
 
 <table style="margin:8px 0 0">
-<thead><tr><th>어떤 경우</th><th>검사가 돌았나</th><th>다음번에는</th></tr></thead>
+<thead><tr><th>어떤 경우</th><th>검사가 실행됐나</th><th>다음번에는</th></tr></thead>
 <tbody>
 <tr><td><b>검사를 안 만들기로 선언했다</b><br>(<code>verification: 없음(이유)</code>)</td>
-    <td><b>안 돌았다</b> — 어댑터가 없다</td><td><b>계속 미검증</b>이다</td></tr>
+ <td><b>실행되지 않았다</b> — 어댑터가 없다</td><td><b>계속 미검증</b>이다</td></tr>
 <tr><td><b>비교할 기준선이 없다</b><br>(첫 <code>story</code>의 커버리지)</td>
-    <td><b>돌았고 값도 얻었다</b> — 비교 대상만 없다</td>
-    <td><b>저절로 없어진다</b> — 이번 값이 다음번 기준선이 된다</td></tr>
+ <td><b>실행됐고 값도 얻었다</b> — 비교 대상만 없다</td>
+ <td><b>저절로 없어진다</b> — 이번 값이 다음번 기준선이 된다</td></tr>
 <tr><td><b>아직 관측되지 않았다</b><br>(스킬이 선언한 조건 — 원장 Q37)</td>
-    <td><b>안 돌았다</b> — 검사할 실행이 아직 없다</td>
-    <td><b>저절로 없어진다</b> — 다음 실제 실행이 산출물을 만든다</td></tr>
+ <td><b>실행되지 않았다</b> — 검사할 실행이 아직 없다</td>
+ <td><b>저절로 없어진다</b> — 다음 실제 실행이 산출물을 만든다</td></tr>
 </tbody>
 </table>
 <br>
-<b>셋 다 「진행을 판정하지 않는다」이고 셋 다 L3로 가므로 같은 결과로 묶는다.</b>
-<b>다만 셋째는 앞의 둘과 달리 「검사가 안 돌았는데도 저절로 없어지는」 경우다</b> — 어댑터가 없어서가 아니라 <b>검사할 실행이 아직 없어서</b>이고, 그래서 <b>이유를 적는 것이 특히 중요하다.</b>
-<b>「어댑터가 없다」와 「실행이 아직 없다」를 구분하지 않으면 영영 안 도는 것과 다음 실행에 도는 것이 한 덩어리로 쌓인다.</b>
+<b>셋 다 「진행을 판정하지 않는다」이고 3개 다 L3로 가므로 같은 결과로 묶는다.</b>
+<b>다만 셋째는 앞의 2개와 달리 「검사가 실행되지 않았는데도 저절로 없어지는」 경우다</b> — 어댑터가 없어서가 아니라 <b>검사할 실행이 아직 없어서</b>이고, 그래서 <b>이유를 적는 것이 특히 중요하다.</b>
+<b>「어댑터가 없다」와 「실행이 아직 없다」를 구분하지 않으면 영영 실행되지 않는 것과 다음 실행에 실행되는 것이 한 덩어리로 쌓인다.</b>
 <b>다만 한 이름이 두 상황을 덮으므로 <code>미검증(이유)</code>로 이유를 함께 남긴다</b> —
 <code>없음(이유)</code>(<a href="#5-4">§5-4</a> 나)와 <code>L0 반영: 없음(이유)</code>(<a href="flow.html#6-1">§6-1</a> ⑥′)이 쓰는 것과 같은 형태다.<br><br>
-<b>이유를 안 적으면 둘을 나중에 구분할 수 없고</b>, 그러면 <b>저절로 없어질 것과 계속 남을 것이 한 덩어리로 쌓인다.</b>
+<b>이유를 안 적으면 2개를 나중에 구분할 수 없고</b>, 그러면 <b>저절로 없어질 것과 계속 남을 것이 한 덩어리로 쌓인다.</b>
 </div>
 
 <div class="note">
 <b>커버리지가 이 4상태를 실제로 어떻게 쓰는지 보여준다 — 그리고 임계를 숫자로 박지 않는다</b>(원장 S17).<br><br>
-<b>규칙 둘</b> — ① <b>델타</b>: 전체 커버리지가 <b>변경 전보다 떨어지지 않는다</b>.
+<b>규칙 2개</b> — ① <b>델타</b>: 전체 커버리지가 <b>변경 전보다 떨어지지 않는다</b>.
 ② <b>변경분 바닥</b>: 이번에 바뀐 줄의 커버리지가 <b>변경 전 전체 커버리지 이상</b>이다.<br><br>
 <b>②의 기준을 「변경 전 전체 커버리지」로 둔 것이 핵심이다.</b>
 <code>80%</code> 같은 값을 박으면 <b>같은 숫자가 언어마다 다른 엄격도</b>가 된다 —
@@ -486,10 +486,10 @@ JaCoCo는 <b>바이트코드 명령어</b>를, Go는 <b>문장</b>을, <code>cov
 <b>base가 없으면</b>(첫 <code>story</code>) 델타는 <b>「미검증」</b>이고 <b>막지 않는다</b> — 측정해 기록하면 다음부터 base가 생긴다.
 <b>측정 자체가 안 됐으면</b> 선언된 경우 <b>「결손」</b>, 선언되지 않은 경우 <b>「설계상 부재」</b>다.
 <b>이 구분이 없으면 fail-open이다</b> — <b>Go는 처리되지 않은 panic 시 프로파일 데이터가 유실</b>되고(공식),
-<b>JaCoCo Gradle은 <code>check</code>에 안 붙어 게이트가 조용히 안 돈다.</b>
+<b>JaCoCo Gradle은 <code>check</code>에 안 붙어 게이트가 조용히 실행되지 않는다.</b>
 </div>
 
-<h4 style="font-size:.96rem; margin:30px 0 8px; font-weight:600">어댑터의 인터페이스 — 다섯 슬롯</h4>
+<h4 style="font-size:.96rem; margin:30px 0 8px; font-weight:600">어댑터의 인터페이스 — 5개 슬롯</h4>
 
 <p><b>어댑터 패턴은 정의상 공통 인터페이스를 전제한다.</b>
 그래서 정할 것은 「어댑터마다 달라지지 않게 하는 법」이 아니라 <b>인터페이스가 무엇인가</b>이고,
@@ -499,43 +499,43 @@ JaCoCo는 <b>바이트코드 명령어</b>를, Go는 <b>문장</b>을, <code>cov
 <thead><tr><th>슬롯</th><th>무엇</th><th>어디서 왔나</th></tr></thead>
 <tbody>
 <tr><td><code>requires</code></td><td>실행 전제 — 도구 · 환경 · eval 세트</td>
-    <td><b>루트에 선언 설정 파일 하나를 두기로 한 결정</b>(원장 D4) — 언어 · 검사별 도구를 거기 적는다. <a href="flow.html#6-1">§6-1</a> ②의 <b>★ 도구 설치 검사</b>가 이것을 읽어 부재 시 세션을 멈춘다</td></tr>
+ <td><b>루트에 선언 설정 파일 하나를 두기로 한 결정</b>(원장 D4) — 언어 · 검사별 도구를 거기 적는다. <a href="flow.html#6-1">§6-1</a> ②의 <b>★ 도구 설치 검사</b>가 이것을 읽어 부재 시 세션을 멈춘다</td></tr>
 <tr><td><code>scope</code></td><td>실행 경계 — <code>write</code> ⇄ <code>commit</code></td>
-    <td><b>검사 경계가 하나가 아니라 둘이라는 결정</b>(원장 D3) — 어느 쪽에서 돌 어댑터인지를 선언한다(<a href="#5-2">§5-2</a>).
-        <b>선언하는 것은 도구의 모드가 아니라 경계다</b>(원장 S8) —
-        <code>write</code>는 <b>쓸 내용과 경로만으로 판정되는 것</b>, <code>commit</code>은 <b>쓰기 후 트리가 필요한 것</b>.
-        <b>도구를 <code>--file</code>로 부를 수 있는지와 무관하다</b></td></tr>
+ <td><b>검사 경계가 하나가 아니라 2개라는 결정</b>(원장 D3) — 어느 쪽에서 돌 어댑터인지를 선언한다(<a href="#5-2">§5-2</a>).
+ <b>선언하는 것은 도구의 모드가 아니라 경계다</b>(원장 S8) —
+ <code>write</code>는 <b>쓸 내용과 경로만으로 판정되는 것</b>, <code>commit</code>은 <b>쓰기 후 트리가 필요한 것</b>.
+ <b>도구를 <code>--file</code>로 부를 수 있는지와 무관하다</b></td></tr>
 <tr><td><code>baseline()</code></td><td>변경 전 검증을 돌려 <b>결과 객체</b>를 남긴다</td>
-    <td><b>P3 — 판정을 종료 코드로 하지 않는다</b>. 검사 결과를 <b>객체로 받아 기대값과 대조</b>한다. 기준선이 곧 그 기대값의 출처다</td></tr>
+ <td><b>P3 — 판정을 종료 코드로 하지 않는다</b>. 검사 결과를 <b>객체로 받아 기대값과 대조</b>한다. 기준선이 곧 그 기대값의 출처다</td></tr>
 <tr><td><code>verify(baseline, 기대방향)</code></td><td>변경 후 대조</td>
-    <td><b>판정 형태가 셋이라는 결정</b>(원장 T2) — <b>추가</b>(실패→통과) · <b>유지</b>(통과→통과) · <b>교체</b>(옛 검증 은퇴 + 새 검증 통과). 그 셋이 「기대방향」 인자다(<a href="#5-1">§5-1</a> 나)</td></tr>
+ <td><b>판정 형태가 3개라는 결정</b>(원장 T2) — <b>추가</b>(실패→통과) · <b>유지</b>(통과→통과) · <b>교체</b>(옛 검증 은퇴 + 새 검증 통과). 그 3개가 「기대방향」 인자다(<a href="#5-1">§5-1</a> 나)</td></tr>
 <tr><td><b>반환값</b></td><td><b>판정 4상태로 정규화</b></td>
-    <td>위 도해의 <b>판정 4상태</b> — 통과·실패 / 설계상 부재 / 결손 / 미검증. <b>어댑터가 다섯이어도 바깥에서 보이는 결과는 넷이다</b></td></tr>
+ <td>위 도해의 <b>판정 4상태</b> — 통과·실패 / 설계상 부재 / 결손 / 미검증. <b>어댑터가 5개여도 바깥에서 보이는 결과는 4개다</b></td></tr>
 </tbody>
 </table>
 
 <div class="note">
-<b>이 조립이 이 제안의 실제 이득이다.</b> 흩어져 있던 다섯이 <b>하나의 계약으로 묶인다</b> — <b>검사 경계 둘</b>(D3) · <b>선언 설정 파일</b>(D4) · <b>결과 객체 판정</b>(P3) · <b>판정 형태 셋</b>(T2) · <b>판정 4상태</b> —
+<b>이 조립이 이 제안의 실제 이득이다.</b> 흩어져 있던 5개가 <b>하나의 계약으로 묶인다</b> — <b>검사 경계 2개</b>(D3) · <b>선언 설정 파일</b>(D4) · <b>결과 객체 판정</b>(P3) · <b>판정 형태 3개</b>(T2) · <b>판정 4상태</b> —
 조사가 <i>“같은 스키마를 검사 어댑터가 함께 쓰므로 따로 설계하면 두 번 만든다”</i>고 한 것이 이것이다.
 </div>
 
 <div class="note">
-<b>남는 위험은 「폭」이고 실패 모드가 둘이다.</b><br><br>
+<b>남는 위험은 「폭」이고 실패 모드가 2개다.</b><br><br>
 <b>좁으면 누출된다.</b> <code>config</code> 어댑터가 <i>망가져도 되는 환경</i>을 요구하는데 <code>requires</code>에 환경을 적을 칸이 없으면,
 그 요구가 <b>어댑터 밖</b>(문서 · 사람 기억)으로 새어나간다. 그러면 <b>환경 없이 돌려도 통과한 것처럼 보인다.</b><br><br>
 <b>넓으면 빈 구현이 생긴다.</b> 슬롯이 많으면 대부분의 어댑터가 그 슬롯을 비우고,
-<b>빈 슬롯은 조용히 통과하는 통로</b>가 된다 — 이 저장소가 여섯 번 확인한 fail-open이다.<br><br>
-<b>위 다섯이 폭의 하한이다</b> — 넷은 이미 강제 지점이나 원칙이 요구하고 있고,
+<b>빈 슬롯은 조용히 통과하는 통로</b>가 된다 — 이 저장소가 6개 번 확인한 fail-open이다.<br><br>
+<b>위 5개가 폭의 하한이다</b> — 4개은 이미 강제 지점이나 원칙이 요구하고 있고,
 다섯째가 없으면 판정 4상태가 무력해진다. <b>더 넣을 것이 있는지는 첫 어댑터를 만들 때 나온다.</b>
 </div>
 
-<h3 id="5-4">5-4. 예외 경로 둘 — 빌드 깨짐과 검증 부재</h3>
-<p><b>예외가 둘이고, 둘 다 「표식이 있으면 경로가 열리고 없으면 결손」이라는 같은 구조다.</b> 새 상태도 새 구분도 늘지 않는다.</p>
+<h3 id="5-4">5-4. 예외 경로 2개 — 빌드 깨짐과 검증 부재</h3>
+<p><b>예외가 2개고, 둘 다 「표식이 있으면 경로가 열리고 없으면 결손」이라는 같은 구조다.</b> 새 상태도 새 구분도 늘지 않는다.</p>
 
 
 <h4 style="font-size:.96rem; margin:24px 0 8px; font-weight:600">(가) 빌드 깨짐 — 왜 열고, 무엇으로 닫는가</h4>
 
-<p><b>커밋 단위에서는 빌드 깨짐을 허용하고, 닫는 장치를 셋 둔다.</b>
+<p><b>커밋 단위에서는 빌드 깨짐을 허용하고, 닫는 장치를 3개 둔다.</b>
 하나라도 빠지면 <b>실측된 fail-open과 구분되지 않는다.</b></p>
 
 <div class="note">
@@ -555,7 +555,7 @@ JaCoCo는 <b>바이트코드 명령어</b>를, Go는 <b>문장</b>을, <code>cov
 <b>왜 이렇게까지 하는가.</b> 실측(1차) — <b>cargo-nextest는 컴파일 실패 시 <code>junit.xml</code>을 갱신하지 않는다.</b>
 mtime이 그대로고 파서는 <b>직전 실행의 <code>RED</code>를 그대로 낸다.</b>
 위험은 “빌드가 깨지면 판정을 못 한다”가 아니라 <b>“빌드가 깨진 상태에서 판정이 성립한 것처럼 보인다”</b>이며,
-<b>의도한 깨짐과 낡은 리포트가 같은 신호를 낸다.</b> 표식이 그 둘을 가른다.
+<b>의도한 깨짐과 낡은 리포트가 같은 신호를 낸다.</b> 표식이 그 2개를 가른다.
 </div>
 
 <h4 style="font-size:.96rem; margin:28px 0 8px; font-weight:600">(나) 검증 부재 — 새 기제가 필요 없다</h4>
@@ -576,7 +576,7 @@ mtime이 그대로고 파서는 <b>직전 실행의 <code>RED</code>를 그대�
 <div class="note">
 <b>다만 선을 하나 그어야 한다 — “검증 환경이 없다”는 설계상 부재가 아니다.</b><br>
 설정·인프라의 <code>baseline</code>은 <b>실행 환경을 전제한다</b> — <code>curl /api</code>를 기준선으로 쓰려면
-nginx가 돌고 있고 <b>망가뜨려도 되는 환경</b>이 있어야 한다. 코드는 워크트리로 충분하지만 설정은 그렇지 않다.<br><br>
+nginx가 실행되고 있고 <b>망가뜨려도 되는 환경</b>이 있어야 한다. 코드는 워크트리로 충분하지만 설정은 그렇지 않다.<br><br>
 그런데 <b>검사할 것이 없는 것</b>과 <b>검사할 수단이 없는 것</b>은 다르다.
 환경 부재는 4상태 중 <b>결손</b>(ⓑ 도구 미설치와 같은 계열)이다.
 <b>이 구분이 없으면 “환경이 없어서요”가 만능 면제부가 된다.</b>

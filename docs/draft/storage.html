@@ -15,135 +15,135 @@
 <div class="filehead">
 <b>최초 작성</b> 2026-08-09 (분할) · <b>내용의 최초 작성</b> 2026-08-06 · <b>최종 수정</b> 2026-08-13<br>
 <b>성격</b> 설계 드래프트 — <b>확정이 아니다</b> · <b>상태</b> v4<br>
-<b>이 문서가 담는 것</b> — <b>정본 넷</b>, 작업 문서 셋, 하네스 자신의 <b>설정 층 다섯</b>.<br>
+<b>이 문서가 담는 것</b> — <b>정본 4개</b>, 작업 문서 3개, 하네스 자신의 <b>설정 층 5개</b>.<br>
 <b>미결은 여기서 관리하지 않는다</b> — <a href="open-questions.md">원장</a>이 원본이고, 이 문서는 필요한 곳에서 ID를 인용한다.
 </div>
 <h2 id="7">7. 저장 — 무엇이 어디 사는가</h2>
 
-<p>가장 구현에 가까운 축이다. <b>정본이 넷이고, 그 밖의 모든 저장은 미러이거나 파생이다</b> —
+<p>가장 구현에 가까운 축이다. <b>정본이 4개고, 그 밖의 모든 저장은 미러이거나 파생이다</b> —
 그 규칙 하나가 이 절 전체를 정한다.</p>
 
-<h3 id="7-1">7-1. 정본이 넷이다</h3>
+<h3 id="7-1">7-1. 정본이 4개다</h3>
 
-<p><b>정본이 넷이고, 그 밖의 모든 저장은 미러이거나 파생이다.</b> 설정이 그 넷에 어떻게 나뉘어 앉는지는 <b><a href="#7-3">§7-3</a></b>이 정한다 — 층 다섯과 <b>층 밖 둘</b>.</p>
+<p><b>정본이 4개고, 그 밖의 모든 저장은 미러이거나 파생이다.</b> 설정이 그 4개에 어떻게 나뉘어 앉는지는 <b><a href="#7-3">§7-3</a></b>이 정한다 — 층 5개와 <b>층 밖 2개</b>.</p>
 
 <table>
 <thead><tr><th>정본</th><th>무엇의</th><th>근거</th></tr></thead>
 <tbody>
-<tr><td><b>하네스 배포 저장소</b></td><td>하네스 자신 — <b>훅 배선 포함</b></td><td>프로젝트 안의 것은 <b>사본 + 핀</b>이다. <b>추적을 요구하지 않는다</b>(원장 S26, 2026-08-18) — <b>대상 저장소가 내 것만이 아니면 개인용 하네스를 커밋할 수 없다.</b> 워크트리에는 <b>주입 스크립트</b>가 넣는다(공유 도구는 메인으로 symlink, 자기 경로를 계산하는 것은 복사, <b>이미 추적되는 항목은 건너뛴다</b>). <b>★ 배포물 확인이 보는 것은 「추적되는가」가 아니라 「워크트리에 있는가」다</b></td></tr>
+<tr><td><b>하네스 배포 저장소</b></td><td>하네스 자신 — <b>훅 등록 포함</b></td><td>프로젝트 안의 것은 <b>사본 + 핀</b>이다. <b>추적을 요구하지 않는다</b>(원장 S26, 2026-08-18) — <b>대상 저장소가 내 것만이 아니면 개인용 하네스를 커밋할 수 없다.</b> 워크트리에는 <b>주입 스크립트</b>가 넣는다(공유 도구는 메인으로 symlink, 자기 경로를 계산하는 것은 복사, <b>이미 추적되는 항목은 건너뛴다</b>). <b>★ 배포물 확인이 보는 것은 「추적되는가」가 아니라 「워크트리에 있는가」다</b></td></tr>
 <tr><td><b>이슈</b></td><td><b>작업 스펙 · 활성 여부</b>(열림/닫힘) · <code>blocked</code></td><td><a href="flow.html#6-3">§6-3</a>. <b><code>story</code> 상태는 저장하지 않고 산출물에서 계산한다</b>(원장 S12) — <b>별도 상태 원장을 두지 않는 것을 넘어 상태 원장 자체가 없다.</b> <b><code>blocked</code>만 예외</b>다 — 막힌 사유는 사람이 쓰는 것이라 산출물이 없다</td></tr>
 <tr><td><b>git</b></td><td><code>task</code> · 계획 문서 · 핀</td><td><a href="layers.html#4-8">§4-8</a>·<a href="#7-2">§7-2</a>. 커밋이 이미 원장이다</td></tr>
-<tr><td><b>원격 DB</b></td><td>세션 상태 · 사용자 선호 · L3 계수기</td><td><b>다른 데 없는 것 셋뿐이다.</b> 나머지는 미러</td></tr>
+<tr><td><b>원격 DB</b></td><td>세션 상태 · 사용자 선호 · L3 계수기</td><td><b>다른 데 없는 것 3개뿐이다.</b> 나머지는 미러</td></tr>
 </tbody>
 </table>
 
 <figure>
 <svg viewBox="0 0 980 530" role="img" aria-label="원장 배치 컴포넌트 다이어그램. 하네스 배포 저장소가 하네스를 설치하고 핀이 git에 추적된다. 하네스는 GitHub·git·로컬·DB에 쓰고, DB는 GitHub과 git의 내용을 미러링한다. 대시보드는 DB를 읽지만 쓰기는 DB가 아니라 정본인 GitHub으로 향한다.">
-  <defs>
-    <marker id="x3a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
-    </marker>
-    <marker id="x3n" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="var(--net)"/>
-    </marker>
-  </defs>
+ <defs>
+ <marker id="x3a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+ <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+ </marker>
+ <marker id="x3n" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+ <path d="M0,0 L10,5 L0,10 z" fill="var(--net)"/>
+ </marker>
+ </defs>
 
-  <g stroke="currentColor" stroke-width="1.4" fill="none">
-    <rect x="60" y="40" width="190" height="68" rx="8"/>
-    <rect x="60" y="195" width="190" height="90" rx="8"/>
-    <rect x="60" y="400" width="190" height="70" rx="8" stroke="var(--net)" stroke-width="1.7"/>
-    <rect x="360" y="55" width="200" height="100" rx="8"/>
-    <rect x="360" y="195" width="200" height="90" rx="8"/>
-    <rect x="700" y="55" width="200" height="135" rx="8" stroke="var(--net)" stroke-width="1.7"/>
-    <rect x="700" y="285" width="200" height="110" rx="8"/>
-  </g>
+ <g stroke="currentColor" stroke-width="1.4" fill="none">
+ <rect x="60" y="40" width="190" height="68" rx="8"/>
+ <rect x="60" y="195" width="190" height="90" rx="8"/>
+ <rect x="60" y="400" width="190" height="70" rx="8" stroke="var(--net)" stroke-width="1.7"/>
+ <rect x="360" y="55" width="200" height="100" rx="8"/>
+ <rect x="360" y="195" width="200" height="90" rx="8"/>
+ <rect x="700" y="55" width="200" height="135" rx="8" stroke="var(--net)" stroke-width="1.7"/>
+ <rect x="700" y="285" width="200" height="110" rx="8"/>
+ </g>
 
-  <g text-anchor="middle" font-size="13" font-weight="650">
-    <text x="155" y="68">하네스 배포 저장소</text>
-    <text x="155" y="228">하네스</text>
-    <text x="155" y="430" fill="var(--net)">대시보드</text>
-    <text x="460" y="80">git</text>
-    <text x="460" y="223">로컬 파일</text>
-    <text x="800" y="83" fill="var(--net)">GitHub</text>
-    <text x="800" y="313">원격 DB</text>
-  </g>
-  <g text-anchor="middle" font-size="10.8" fill="var(--muted)">
-    <text x="155" y="88">정본 — 스킬 · 훅 · 기본값</text>
-    <text x="155" y="250">단일 쓰기 경로</text>
-    <text x="155" y="266">— 검증은 스크립트가 한다</text>
-    <text x="155" y="450">읽기는 모아서 · 쓰기는 정본으로</text>
-    <text x="460" y="101">커밋 = task 원장</text>
-    <text x="460" y="119">브랜치 · 워크트리</text>
-    <text x="460" y="140" font-weight="600" fill="currentColor">하네스 핀 — 추적 대상</text>
-    <text x="460" y="244">설정 층 · 계획 문서</text>
-    <text x="460" y="262">이슈 스펙 캐시 · 하네스 사본</text>
-    <text x="800" y="104">issue = story · milestone = epic</text>
-    <text x="800" y="122">label = area + 상태</text>
-    <text x="800" y="140">PR</text>
-    <text x="800" y="335">세션 상태 · 사용자 선호</text>
-    <text x="800" y="353">L3 계수기</text>
-    <text x="800" y="375" font-style="italic">+ 미러 (조회 가속)</text>
-  </g>
+ <g text-anchor="middle" font-size="13" font-weight="650">
+ <text x="155" y="68">하네스 배포 저장소</text>
+ <text x="155" y="228">하네스</text>
+ <text x="155" y="430" fill="var(--net)">대시보드</text>
+ <text x="460" y="80">git</text>
+ <text x="460" y="223">로컬 파일</text>
+ <text x="800" y="83" fill="var(--net)">GitHub</text>
+ <text x="800" y="313">원격 DB</text>
+ </g>
+ <g text-anchor="middle" font-size="10.8" fill="var(--muted)">
+ <text x="155" y="88">정본 — 스킬 · 훅 · 기본값</text>
+ <text x="155" y="250">단일 쓰기 경로</text>
+ <text x="155" y="266">— 검증은 스크립트가 한다</text>
+ <text x="155" y="450">읽기는 모아서 · 쓰기는 정본으로</text>
+ <text x="460" y="101">커밋 = task 원장</text>
+ <text x="460" y="119">브랜치 · 워크트리</text>
+ <text x="460" y="140" font-weight="600" fill="currentColor">하네스 핀 — 추적 대상</text>
+ <text x="460" y="244">설정 층 · 계획 문서</text>
+ <text x="460" y="262">이슈 스펙 캐시 · 하네스 사본</text>
+ <text x="800" y="104">issue = story · milestone = epic</text>
+ <text x="800" y="122">label = area + 상태</text>
+ <text x="800" y="140">PR</text>
+ <text x="800" y="335">세션 상태 · 사용자 선호</text>
+ <text x="800" y="353">L3 계수기</text>
+ <text x="800" y="375" font-style="italic">+ 미러 (조회 가속)</text>
+ </g>
 
-  <!-- 배포 저장소 → 하네스 -->
-  <line x1="110" y1="108" x2="110" y2="189" stroke="currentColor" stroke-width="1.6" marker-end="url(#x3a)"/>
-  <text x="120" y="145" font-size="11">설치 · 갱신</text>
-  <text x="120" y="160" font-size="10.5" fill="var(--muted)">3-way merge</text>
+ <!-- 배포 저장소 → 하네스 -->
+ <line x1="110" y1="108" x2="110" y2="189" stroke="currentColor" stroke-width="1.6" marker-end="url(#x3a)"/>
+ <text x="120" y="145" font-size="11">설치 · 갱신</text>
+ <text x="120" y="160" font-size="10.5" fill="var(--muted)">3-way merge</text>
 
-  <!-- 하네스 → git -->
-  <path d="M200,195 V130 H354" fill="none" stroke="currentColor" stroke-width="1.6" marker-end="url(#x3a)"/>
-  <text x="278" y="123" text-anchor="middle" font-size="11">정본 — task · 핀</text>
+ <!-- 하네스 → git -->
+ <path d="M200,195 V130 H354" fill="none" stroke="currentColor" stroke-width="1.6" marker-end="url(#x3a)"/>
+ <text x="278" y="123" text-anchor="middle" font-size="11">정본 — task · 핀</text>
 
-  <!-- 하네스 → 로컬 파일 -->
-  <line x1="250" y1="240" x2="354" y2="240" stroke="currentColor" stroke-width="1.6" marker-end="url(#x3a)"/>
-  <text x="302" y="233" text-anchor="middle" font-size="11">파생</text>
+ <!-- 하네스 → 로컬 파일 -->
+ <line x1="250" y1="240" x2="354" y2="240" stroke="currentColor" stroke-width="1.6" marker-end="url(#x3a)"/>
+ <text x="302" y="233" text-anchor="middle" font-size="11">파생</text>
 
-  <!-- 하네스 → GitHub -->
-  <path d="M250,208 H310 V175 H640 V120 H694" fill="none" stroke="var(--net)" stroke-width="1.8" marker-end="url(#x3n)"/>
-  <text x="475" y="168" text-anchor="middle" font-size="11" fill="var(--net)">정본 — story 상태</text>
+ <!-- 하네스 → GitHub -->
+ <path d="M250,208 H310 V175 H640 V120 H694" fill="none" stroke="var(--net)" stroke-width="1.8" marker-end="url(#x3n)"/>
+ <text x="475" y="168" text-anchor="middle" font-size="11" fill="var(--net)">정본 — story 상태</text>
 
-  <!-- 하네스 → DB -->
-  <path d="M155,285 V330 H694" fill="none" stroke="currentColor" stroke-width="1.6" marker-end="url(#x3a)"/>
-  <text x="420" y="323" text-anchor="middle" font-size="11">정본 — 세션 · 선호 · 계수기</text>
+ <!-- 하네스 → DB -->
+ <path d="M155,285 V330 H694" fill="none" stroke="currentColor" stroke-width="1.6" marker-end="url(#x3a)"/>
+ <text x="420" y="323" text-anchor="middle" font-size="11">정본 — 세션 · 선호 · 계수기</text>
 
-  <!-- GitHub ⇢ DB -->
-  <line x1="800" y1="190" x2="800" y2="279" stroke="currentColor" stroke-width="1.3" stroke-dasharray="4 4" marker-end="url(#x3a)"/>
-  <text x="812" y="240" font-size="11" fill="var(--muted)">미러</text>
+ <!-- GitHub ⇢ DB -->
+ <line x1="800" y1="190" x2="800" y2="279" stroke="currentColor" stroke-width="1.3" stroke-dasharray="4 4" marker-end="url(#x3a)"/>
+ <text x="812" y="240" font-size="11" fill="var(--muted)">미러</text>
 
-  <!-- git ⇢ DB -->
-  <path d="M560,135 H660 V300 H694" fill="none" stroke="currentColor" stroke-width="1.3" stroke-dasharray="4 4" marker-end="url(#x3a)"/>
-  <text x="612" y="128" text-anchor="middle" font-size="11" fill="var(--muted)">미러</text>
+ <!-- git ⇢ DB -->
+ <path d="M560,135 H660 V300 H694" fill="none" stroke="currentColor" stroke-width="1.3" stroke-dasharray="4 4" marker-end="url(#x3a)"/>
+ <text x="612" y="128" text-anchor="middle" font-size="11" fill="var(--muted)">미러</text>
 
-  <!-- 대시보드 → DB -->
-  <path d="M250,415 H662 V360 H694" fill="none" stroke="var(--net)" stroke-width="1.6" marker-end="url(#x3n)"/>
-  <text x="440" y="408" text-anchor="middle" font-size="11" fill="var(--net)">읽기 — 한 곳에서</text>
+ <!-- 대시보드 → DB -->
+ <path d="M250,415 H662 V360 H694" fill="none" stroke="var(--net)" stroke-width="1.6" marker-end="url(#x3n)"/>
+ <text x="440" y="408" text-anchor="middle" font-size="11" fill="var(--net)">읽기 — 한 곳에서</text>
 
-  <!-- 대시보드 → GitHub -->
-  <path d="M250,452 H944 V100 H906" fill="none" stroke="var(--net)" stroke-width="2.4" marker-end="url(#x3n)"/>
-  <text x="570" y="445" text-anchor="middle" font-size="11.5" fill="var(--net)" font-weight="650">쓰기는 DB가 아니라 정본으로</text>
+ <!-- 대시보드 → GitHub -->
+ <path d="M250,452 H944 V100 H906" fill="none" stroke="var(--net)" stroke-width="2.4" marker-end="url(#x3n)"/>
+ <text x="570" y="445" text-anchor="middle" font-size="11.5" fill="var(--net)" font-weight="650">쓰기는 DB가 아니라 정본으로</text>
 
-  <!-- 대시보드 ⇢ git (파생) -->
-  <path d="M60,435 H26 V22 H460 V49" fill="none" stroke="currentColor" stroke-width="1.3" stroke-dasharray="1.5 4" marker-end="url(#x3a)"/>
-  <text x="250" y="15" text-anchor="middle" font-size="11" fill="var(--muted)">파생 — 저장하지 않고 수집 시점에 읽는다</text>
+ <!-- 대시보드 ⇢ git (파생) -->
+ <path d="M60,435 H26 V22 H460 V49" fill="none" stroke="currentColor" stroke-width="1.3" stroke-dasharray="1.5 4" marker-end="url(#x3a)"/>
+ <text x="250" y="15" text-anchor="middle" font-size="11" fill="var(--muted)">파생 — 저장하지 않고 수집 시점에 읽는다</text>
 </svg>
 
 <div class="legend">
-  <span><i class="sw"></i> 정본 — 여기가 진실이다</span>
-  <span><i class="sw" style="border-top-style:dashed"></i> 미러 — 조회용 사본</span>
-  <span><i class="sw" style="border-top-style:dotted"></i> 파생 — 저장하지 않는다</span>
+ <span><i class="sw"></i> 정본 — 여기가 진실이다</span>
+ <span><i class="sw" style="border-top-style:dashed"></i> 미러 — 조회용 사본</span>
+ <span><i class="sw" style="border-top-style:dotted"></i> 파생 — 저장하지 않는다</span>
 </div>
 
 <figcaption>
 <b>굵은 화살표 하나가 이 그림의 전부다</b> — 대시보드가 <b>무언가를 바꿀 때 DB가 아니라 GitHub으로 쓴다.</b><br><b>⚠ 2026-08-09 정정</b> — 원래 <i>“대시보드가 <b>상태를 바꿀 때</b>”</i>였는데 <b><code>story</code> 상태를 저장하지 않기로 하면서 바꿀 상태가 없어졌다</b>(원장 S12). 남는 쓰기는 <b>스펙 편집 · <code>blocked</code> 표시 · 이슈 열고 닫기</b>이고 <b>규칙은 그대로다 — 정본으로 쓴다.</b><br>
 DB에 쓰면 같은 <code>story</code> 상태가 두 곳에 살게 되고, 그것이 참고 하네스에서
 main hub와 워크트리의 <code>dev-context.json</code>이 갈라진 것과 같은 형태다.
-<b>DB가 정본인 것은 다른 데 없는 것 셋뿐이다</b> — 세션 상태 · 사용자 선호 · L3 계수기.
+<b>DB가 정본인 것은 다른 데 없는 것 3개뿐이다</b> — 세션 상태 · 사용자 선호 · L3 계수기.
 <b>하네스 자신의 정본은 배포 저장소이고, 프로젝트 안의 것은 사본 + 핀이다.</b>
 </figcaption>
 </figure>
 
 <div class="note">
-<b>원격 DB에 넣지 않는 것 셋.</b>
+<b>원격 DB에 넣지 않는 것 3개.</b>
 <b>㉠ 머신 감지 결과</b> — 공유하면 다른 머신의 결과를 물려받는다(<a href="#7-3">§7-3</a>).
 <b>㉡ 워크트리 런타임 실행 상태</b> — 다른 세션이 남의 실행 상태를 자기 것으로 읽는다.
 <b>㉢ 대용량 append</b> — 세션 로그·도구 호출 이력.<br><br>
@@ -154,19 +154,19 @@ main hub와 워크트리의 <code>dev-context.json</code>이 갈라진 것과 �
 </div>
 
 <div class="note">
-<b>대시보드는 원장이 아니라 뷰다.</b> 읽기는 넷에서 모으고, <b>쓰기는 DB가 아니라 정본으로 간다.</b>
+<b>대시보드는 원장이 아니라 뷰다.</b> 읽기는 4개에서 모으고, <b>쓰기는 DB가 아니라 정본으로 간다.</b>
 DB에 쓰면 같은 <code>story</code> 상태가 두 곳에 살게 되고, 그것이 참고 하네스에서
 main hub와 워크트리의 <code>dev-context.json</code>이 갈라진 것과 <b>같은 형태</b>다.<br><br>
-<b>DB가 죽어도 <code>task</code>는 계속 돈다</b> — 관측 실패로 작업이 멈추는 것은 과하다.
+<b>DB가 죽어도 <code>task</code>는 계속 실행된다</b> — 관측 실패로 작업이 멈추는 것은 과하다.
 다만 <b>「알 수 없음」을 표시</b>해야 하고 조용히 「세션 없음」으로 보이면 안 된다.
 </div>
 
-<h3 id="7-2">7-2. 작업 문서 셋 — 이슈 트래커와 계획 문서</h3>
+<h3 id="7-2">7-2. 작업 문서 3개 — 이슈 트래커와 계획 문서</h3>
 
 <p><b>경계는 계층 수가 아니라 “위로 올라가는가”로 정한다.</b>
 계층 간 신호는 이슈 트래커에, 로컬 루프는 계획 문서에 둔다.</p>
 
-<h4 style="font-size:.96rem; margin:26px 0 8px; font-weight:600">문서가 셋이다 — 수명이 다르다</h4>
+<h4 style="font-size:.96rem; margin:26px 0 8px; font-weight:600">문서가 3개다 — 수명이 다르다</h4>
 
 <table>
 <thead><tr><th>문서</th><th>무엇</th><th>어디</th><th>수명</th></tr></thead>
@@ -280,9 +280,9 @@ L3가 지적을 커밋에 귀속시키려면 그 규약이 필요하다.
 <b>첨부는 파일 업로드가 아니라 이슈 본문(markdown)으로 둔다</b> — 업로드는 diff가 안 되고 URL 만료·인증이 붙는다.
 </div>
 
-<h3 id="7-3">7-3. 하네스 자신의 설정 — 층이 다섯이고, 층 밖에 둘이 있다</h3>
+<h3 id="7-3">7-3. 하네스 자신의 설정 — 층이 5개고, 층 밖에 둘이 있다</h3>
 
-<p><b>하네스 자신의 운영 설정은 층 다섯에 나뉘고, 층에 넣으면 안 되는 것이 둘 있다.</b>
+<p><b>하네스 자신의 운영 설정은 층 5개에 나뉘고, 층에 넣으면 안 되는 것이 2개 있다.</b>
 좁은 층이 넓은 층을 이기고, <b>강제는 「어느 층에 놓을 수 있는가」의 금지로 건다.</b></p>
 
 <p>실행 축에서는 ⓪·①·②가 이 절을 소비한다(<a href="flow.html#6-1">§6-1</a>).
@@ -291,7 +291,7 @@ L3가 지적을 커밋에 귀속시키려면 그 규약이 필요하다.
 <div class="note">
 <b>참고 하네스는 상태와 설정을 한 파일에 뒀고, 그래서 통째로 옮길 곳이 없었다.</b>
 <code>dev-context.json</code>의 <code>config</code> 절을 실측하면 <b>8 네임스페이스 18키</b>인데
-<b>공유 축이 서로 다른 다섯 부류가 한 이름 아래 섞여 있다.</b>
+<b>공유 축이 서로 다른 5개 부류가 한 이름 아래 섞여 있다.</b>
 한 파일이므로 <b>git에 넣으면 머신마다 달라야 하는 값이 충돌하고, 원격에 올리면 공유하면 안 되는 값이 오염된다.</b>
 <b>고를 문제가 아니라 갈라야 하는 문제다.</b>
 </div>
@@ -300,19 +300,19 @@ L3가 지적을 커밋에 귀속시키려면 그 규약이 필요하다.
 <thead><tr><th>부류</th><th>예</th><th>공유 축</th><th>놓일 수 있는 층</th></tr></thead>
 <tbody>
 <tr><td><b>① 프로젝트 사실</b></td><td>기본 브랜치 · 브랜치 패턴 · 문서 수집 필터 · 분석 대상 디렉터리</td>
-    <td>저장소</td><td><b>프로젝트 정본</b> (감지로 재생성 가능)</td></tr>
+ <td>저장소</td><td><b>프로젝트 정본</b> (감지로 재생성 가능)</td></tr>
 <tr><td><b>② 사용자 선호</b></td><td>승인 대기 · 자동 커밋 · 자동 리뷰 · 적대적 리뷰 opt-in</td>
-    <td><b>사람</b></td><td><b>사용자 선호</b> · 프로젝트 정본 · 머신 · 세션 — <b>전 층 허용</b></td></tr>
+ <td><b>사람</b></td><td><b>사용자 선호</b> · 프로젝트 정본 · 머신 · 세션 — <b>전 층 허용</b></td></tr>
 <tr><td><b>③ 클론 사실</b></td><td>push/pull 리모트 (fork면 갈린다)</td>
-    <td>클론</td><td><b>머신 로컬만.</b> 프로젝트 정본 층 <b>금지</b></td></tr>
+ <td>클론</td><td><b>머신 로컬만.</b> 프로젝트 정본 층 <b>금지</b></td></tr>
 <tr><td><b>④ 머신 감지 결과</b></td><td>외부 CLI 가용성·인증·버전·검사 시각</td>
-    <td>머신</td><td><b>층이 아니다</b> — 아래 참조</td></tr>
+ <td>머신</td><td><b>층이 아니다</b> — 아래 참조</td></tr>
 <tr><td><b>⑤ 런타임 실행 상태</b></td><td>배치 진행 중 표시 · 진행 중인 대상</td>
-    <td>세션</td><td><b>층이 아니다</b> — 아래 참조</td></tr>
+ <td>세션</td><td><b>층이 아니다</b> — 아래 참조</td></tr>
 </tbody>
 </table>
 
-<h4 style="font-size:.96rem; margin:26px 0 8px; font-weight:600">층은 다섯이고 좁은 쪽이 이긴다</h4>
+<h4 style="font-size:.96rem; margin:26px 0 8px; font-weight:600">층은 5개고 좁은 쪽이 이긴다</h4>
 
 <table>
 <thead><tr><th>#</th><th>층</th><th>어디</th><th>누가 바꾸나</th></tr></thead>
@@ -351,20 +351,20 @@ L3가 지적을 커밋에 귀속시키려면 그 규약이 필요하다.
 <thead><tr><th>무엇</th><th>규칙</th><th>왜</th></tr></thead>
 <tbody>
 <tr><td><b>쓰기 방향</b></td>
-    <td>기본은 <b>가장 좁은 층</b>(워크트리면 세션, 메인이면 머신 로컬).
-        넓히려면 <code>--scope</code>를 명시한다. <b>어느 층에 썼는지 출력한다</b></td>
-    <td>좁은 기본은 잘못 써도 워크트리와 함께 사라진다. <b>넓은 기본은 조용히 다른 워크트리에 영향을 준다</b></td></tr>
+ <td>기본은 <b>가장 좁은 층</b>(워크트리면 세션, 메인이면 머신 로컬).
+ 넓히려면 <code>--scope</code>를 명시한다. <b>어느 층에 썼는지 출력한다</b></td>
+ <td>좁은 기본은 잘못 써도 워크트리와 함께 사라진다. <b>넓은 기본은 조용히 다른 워크트리에 영향을 준다</b></td></tr>
 <tr><td><b>sync-back</b></td>
-    <td><b>어느 부류에도 두지 않는다.</b> 워크트리의 변경은 메인으로 전파되지 않는다</td>
-    <td>참고 하네스가 이것을 두었고, <b>정본의 위치가 시점에 따라 이동했다</b> —
-        프로비저닝 직후엔 메인, 작업 중엔 워크트리, teardown 후엔 다시 메인</td></tr>
+ <td><b>어느 부류에도 두지 않는다.</b> 워크트리의 변경은 메인으로 전파되지 않는다</td>
+ <td>참고 하네스가 이것을 두었고, <b>정본의 위치가 시점에 따라 이동했다</b> —
+ 프로비저닝 직후엔 메인, 작업 중엔 워크트리, teardown 후엔 다시 메인</td></tr>
 <tr><td><b>채우기</b></td>
-    <td>기본값과 스캔은 <b>미설정일 때만</b> 채운다. <code>[감지]</code> / <code>[보존]</code>을 출력한다</td>
-    <td>초기화는 재실행된다. <b>조용히 보존하면 “왜 안 바뀌지”가 되고, 조용히 덮으면 “왜 바뀌었지”가 된다</b></td></tr>
+ <td>기본값과 스캔은 <b>미설정일 때만</b> 채운다. <code>[감지]</code> / <code>[보존]</code>을 출력한다</td>
+ <td>초기화는 재실행된다. <b>조용히 보존하면 “왜 안 바뀌지”가 되고, 조용히 덮으면 “왜 바뀌었지”가 된다</b></td></tr>
 <tr><td><b>해석 시점</b></td>
-    <td><b>세션 시작에 한 번</b> 해석하고 캐시한다. 런타임 재해석은 없다</td>
-    <td>플랫폼 실측 — <i>“standard settings files are re-read at launch”</i>.
-        <b>파일에 둔 설정만 재개 시 살아난다</b></td></tr>
+ <td><b>세션 시작에 한 번</b> 해석하고 캐시한다. 런타임 재해석은 없다</td>
+ <td>플랫폼 실측 — <i>“standard settings files are re-read at launch”</i>.
+ <b>파일에 둔 설정만 재개 시 살아난다</b></td></tr>
 </tbody>
 </table>
 
@@ -380,8 +380,8 @@ L3가 지적을 커밋에 귀속시키려면 그 규약이 필요하다.
 </div>
 
 <div class="note">
-<b>대가 둘.</b> <b>층이 다섯이면 “왜 이 값이지”가 어려워진다</b> — 그래서 <b>해석 결과와 함께 출처 층을 출력</b>해야 하고,
-이건 선택이 아니라 다섯 층을 두기로 한 것의 비용이다.<br><br>
+<b>대가 2개.</b> <b>층이 5개면 “왜 이 값이지”가 어려워진다</b> — 그래서 <b>해석 결과와 함께 출처 층을 출력</b>해야 하고,
+이건 선택이 아니라 5개 층을 두기로 한 것의 비용이다.<br><br>
 그리고 <b>복제 시점이 곧 stale의 시작점이다.</b> 워크트리가 메인에서 복제한 뒤 메인이 바뀌면 옛 값을 쓴다.
 <b>양방향 분기가 단방향 지연으로 줄어드는 것이지 사라지는 것은 아니다.</b>
 완화는 ⑤를 복제 대상에서 뺀 것이고 — ①~③은 세션 도중에 거의 바뀌지 않으므로 지연이 무해하다.
@@ -397,8 +397,8 @@ L3가 지적을 커밋에 귀속시키려면 그 규약이 필요하다.
 <div class="note warn">
 <b>이 목록이 없어서 빠진 것이 안 보였다</b>(원장 S19).
 이 문서는 <b>워크플로우</b>(언제 무엇이 일어나는가)와 <b>판정</b>(무엇이 통과를 정하는가)을 다뤘는데,
-<b>⓪이 무엇을 넣는지는 도해 안에 세 단어로만 있었다</b> — <i>“스킬 · 훅 배선 · 선언 설정 스캐폴드”</i>.
-<b>배선 넷은 훅만 센다.</b>
+<b>⓪이 무엇을 넣는지는 도해 안에 세 단어로만 있었다</b> — <i>“스킬 · 훅 등록 · 선언 설정 스캐폴드”</i>.
+<b>등록 4개은 훅만 센다.</b>
 <b>참고 하네스 실물과 대조하자 검토를 실행할 주체와 권한 허용 목록이 통째로 빠져 있었다</b> — 각각 <b>S20</b>·<b>S21</b>로 닫았다.
 </div>
 
@@ -406,28 +406,28 @@ L3가 지적을 커밋에 귀속시키려면 그 규약이 필요하다.
 <thead><tr><th>무엇</th><th>어디에 놓이나</th><th>정해졌나</th></tr></thead>
 <tbody>
 <tr><td><b>명령</b>(스킬)</td><td><code>.claude/skills/</code></td>
-    <td><b>단계에서 파생된다</b> — 명령으로 부르는 여덟(<a href="flow.html#6-1">§6-1</a>). <b>여럿일 때의 로딩 규칙은 미정</b>(원장 Q31).<br><b>규칙 하나 — 작업 환경 도구 호출은 한 스킬 안에서만 한다</b>(원장 S23)</td></tr>
+ <td><b>단계에서 파생된다</b> — 명령으로 부르는 8개(<a href="flow.html#6-1">§6-1</a>). <b>여럿일 때의 로딩 규칙은 미정</b>(원장 Q31).<br><b>규칙 하나 — 작업 환경 도구 호출은 한 스킬 안에서만 한다</b>(원장 S23)</td></tr>
 <tr><td><b>서브에이전트</b></td><td><code>.claude/agents/</code></td>
-    <td><b>넷</b>(원장 S20) — <b>코드 검토자</b>(⑤는 고치고 ⑧은 의견만) · <b>보안 검토자</b>(⑤′ 병렬) · <b>문서 검토자</b>(③′·④′, 고치지 않는다) · <b>구현자</b>(작업 종류별).<br><b>심각도 기준은 각 파일 안의 체크리스트</b>, <b>모델도 파일에 박는다</b> — 기준·모델·검토자가 함께 배포되고 함께 핀이 박힌다</td></tr>
+ <td><b>넷</b>(원장 S20) — <b>코드 검토자</b>(⑤는 고치고 ⑧은 의견만) · <b>보안 검토자</b>(⑤′ 병렬) · <b>문서 검토자</b>(③′·④′, 고치지 않는다) · <b>구현자</b>(작업 종류별).<br><b>심각도 기준은 각 파일 안의 체크리스트</b>, <b>모델도 파일에 박는다</b> — 기준·모델·검토자가 함께 배포되고 함께 핀이 박힌다</td></tr>
 <tr><td><b>훅 스크립트</b></td><td><code>.claude/scripts/</code></td>
-    <td><b>넷</b>(<a href="flow.html#6-1">§6-1</a>) — <code>SessionStart</code> · 쓰기 경계 · 커밋 경계 · 포맷</td></tr>
+ <td><b>넷</b>(<a href="flow.html#6-1">§6-1</a>) — <code>SessionStart</code> · 쓰기 경계 · 커밋 경계 · 포맷</td></tr>
 <tr><td><code>settings.json</code> — <b>훅 선언</b></td><td><code>.claude/</code></td>
-    <td><b>사건 셋</b>. <b>상속되지 않으므로 저장소 루트 하나</b>(원장 S10)</td></tr>
+ <td><b>사건 3개</b>. <b>상속되지 않으므로 저장소 루트 하나</b>(원장 S10)</td></tr>
 <tr><td><code>settings.json</code> — <b>권한 허용</b></td><td><code>.claude/</code></td>
-    <td><b>단계가 실제로 부르는 것만</b>(원장 S21) — git·gh · P1의 언어 도구 둘 · <b>선언 설정에 적힌 검사 도구</b> · <code>Skill(*)</code>.<br><b>허용 목록과 선언 설정이 연결된다</b> — 어댑터가 쓰겠다는 도구가 허용에 없으면 ⓪에서 잡힌다. <b><code>deny</code>는 두지 않는다</b>(막을 상태 필드가 없다)</td></tr>
+ <td><b>단계가 실제로 부르는 것만</b>(원장 S21) — git·gh · P1의 언어 도구 2개 · <b>선언 설정에 적힌 검사 도구</b> · <code>Skill(*)</code>.<br><b>허용 목록과 선언 설정이 연결된다</b> — 어댑터가 쓰겠다는 도구가 허용에 없으면 ⓪에서 잡힌다. <b><code>deny</code>는 두지 않는다</b>(막을 상태 필드가 없다)</td></tr>
 <tr><td><code>settings.json</code> — <b>상태 표시줄</b></td><td><code>.claude/</code></td>
-    <td>미정 — 원장 Q34. <b>상태를 계산으로 바꿨으므로 표시할 것이 달라진다</b>(원장 S12)</td></tr>
+ <td>미정 — 원장 Q34. <b>상태를 계산으로 바꿨으므로 표시할 것이 달라진다</b>(원장 S12)</td></tr>
 <tr><td><b>선언 설정</b>(검사 어댑터)</td><td>저장소 루트</td>
-    <td><b>정해졌다</b>(원장 D4) — 언어 × 검사별 도구. 어댑터 계약은 <a href="judgment.html#5-3">§5-3</a></td></tr>
+ <td><b>정해졌다</b>(원장 D4) — 언어 × 검사별 도구. 어댑터 계약은 <a href="judgment.html#5-3">§5-3</a></td></tr>
 <tr><td><b>코딩 규약</b></td><td>미정</td><td>미정 — 원장 Q34</td></tr>
 <tr><td><b>기술 스택 지식</b></td><td>미정</td>
-    <td>미정 — 원장 Q32. <b>P1이 좁혔다</b> — 당장은 <code>TS/Node</code>·<code>Python</code> 둘</td></tr>
+ <td>미정 — 원장 Q32. <b>P1이 좁혔다</b> — 당장은 <code>TS/Node</code>·<code>Python</code> 둘</td></tr>
 <tr><td><b>평가 세트</b></td><td><b>따로 두지 않는다</b></td>
-    <td><b>스킬 파일 안에 조건을 선언하고 실제 실행의 산출물로 확인한다</b>(원장 Q37 · <a href="judgment.html#5-1">§5-1</a>) —
-    <b>배포할 별도 파일이 생기지 않고</b>, 검사 대상은 워크플로가 이미 남기는 커밋·PR·기록이다.
-    <b>회귀 게이트로만 쓴다</b>(원장 D5)</td></tr>
+ <td><b>스킬 파일 안에 조건을 선언하고 실제 실행의 산출물로 확인한다</b>(원장 Q37 · <a href="judgment.html#5-1">§5-1</a>) —
+ <b>배포할 별도 파일이 생기지 않고</b>, 검사 대상은 워크플로가 이미 남기는 커밋·PR·기록이다.
+ <b>회귀 게이트로만 쓴다</b>(원장 D5)</td></tr>
 <tr><td><b>매니페스트</b>(핀)</td><td><code>.harness/</code></td>
-    <td><b>정해졌다</b> — <code>sha</code>(재현) + <code>contentHash</code>(드리프트). <b>★ 배포물 확인의 대상</b></td></tr>
+ <td><b>정해졌다</b> — <code>sha</code>(재현) + <code>contentHash</code>(드리프트). <b>★ 배포물 확인의 대상</b></td></tr>
 </tbody>
 </table>
 
