@@ -731,7 +731,7 @@
       <h2>구간 상세</h2>
       <span class="sec-tag">milestones · gates</span>
     </div>
-    <p class="sec-note">각 카드는 해당 구간에서 만들 산출물입니다. 참고 하네스의 어떤 스킬을 가져올지는 이 문서에서 미리 확정하지 않습니다. 각 작업을 시작할 때 필요한 스킬만 열어 보고, 그대로 쓸지 수정할지 새로 만들지 판단합니다(<a href="../draft/open-questions.md">미결 목록 S25</a>).</p>
+    <p class="sec-note">각 카드는 해당 구간에서 만들 산출물입니다. <strong>구간 옆 숫자는 카드 수이지 이슈 수가 아닙니다</strong> — 카드 하나가 이슈 하나가 되기도 하고, 만드는 것이 아니라 방식을 적은 카드는 이슈가 되지 않습니다. 참고 하네스의 어떤 스킬을 가져올지는 이 문서에서 미리 확정하지 않습니다. 각 작업을 시작할 때 필요한 스킬만 열어 보고, 그대로 쓸지 수정할지 새로 만들지 판단합니다(<a href="../draft/open-questions.md">미결 목록 S25</a>).</p>
 
     <div class="track">
 
@@ -803,7 +803,7 @@
         <div class="gates">
           <span class="gate held">훅 등록 확인 — 훅 네 개가 설정에 등록됐는가</span>
           <span class="gate held">매니페스트가 제자리에 있는가 — 무엇을 배포했는지 기록됐는가</span>
-          <span class="gate held">파이썬 파일 쓰기가 게이트를 타는가</span>
+          <span class="gate held">쓰기 경계와 커밋 경계가 실제로 막는가</span>
         </div>
         <p class="cp-foot"><b>배포물 확인은 CP1에서 실행하지 않습니다.</b> 아직 작업 워크트리가 없어서 대조할 대상이 없기 때문입니다. 검사는 M0에서 만들고, 처음 실행하는 시점은 M1에서 첫 워크트리를 만들 때입니다.<br><br><b>그때의 대조 기준은 매니페스트입니다.</b> 배포 스크립트가 설치한 항목을 매니페스트에 기록하고, 이후 검사는 그 목록과 실제 워크트리를 비교합니다. 고정 목록을 문서에 따로 두지 않는 이유는 배포 단위가 늘 때마다 여러 문서를 함께 고쳐야 하는 일을 피하기 위해서입니다. 스킬이 0개면 0개로 일치하고, M2에서 스킬이 늘어도 같은 검사를 그대로 사용할 수 있습니다.<br><br><b>CP1을 먼저 두는 이유</b> — 참고 하네스에서는 설정 파일이 워크트리에 따라가지 않아 게이트가 통째로 사라진 적이 있습니다. 이번에는 grid fin 저장소에 먼저 적용해 보고, 배포 전 백업을 남겨 되돌릴 수 있게 합니다.</p>
       </div>
@@ -819,10 +819,11 @@
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title">가장 작은 규모로 한 번</span></div>
             <div class="kv"><span class="k">규모</span><span class="v">큰 묶음 1개 → 작업 단위 1개 → 커밋 2~3개</span></div>
             <div class="kv rest"><span class="k">대상</span><span class="v"><strong>스킬을 작성하는 작업 자체</strong>입니다. 스킬 기준선 방식에는 대가가 3개 있는데, 그중 판정이 다음 실행으로 밀리는 문제는 이 작업에서만 확인할 수 있습니다</span></div>
+            <div class="kv rest"><span class="k">방식</span><span class="v"><strong>명령을 직접 치고 절차는 사람이 따릅니다.</strong> 스킬은 M2에서 만듭니다 — 무엇을 자동화할지는 한 번 밟아 봐야 알 수 있고, 지금 만들면 밟아 보지 않은 절차를 추측으로 굳히게 됩니다. 게이트는 훅이 이미 강제하므로 순서를 건너뛰면 막힙니다</span></div>
           </div>
           <div class="card t">
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title">검토는 사람이 직접</span></div>
-            <div class="kv"><span class="k">대상</span><span class="v">스펙 검토 · 계획 검토 · 작업 단위 검토</span></div>
+            <div class="kv"><span class="k">대상</span><span class="v">진행을 판정하는 검토 5개 — 스펙(③′) · 계획(④′) · <strong>커밋 경계의 코드 검토(⑤)</strong> · story(⑤′) · PR(⑦)</span></div>
             <div class="kv rest"><span class="k">이유</span><span class="v">아직 검토를 자동화하지 않아도 됩니다. 사람이 검토하고 <strong>검토 기록 커밋</strong>만 남기면 상태 계산은 정상적으로 동작합니다. 자동화는 M2에서 합니다</span></div>
           </div>
           <div class="card t">
@@ -989,7 +990,7 @@
       <div class="next-card">
         <div class="next-n">1</div>
         <div class="next-t">배포 스크립트</div>
-        <p class="next-d">나머지 세 작업이 이 배포 스크립트 위에 올라갑니다. 배포 대상은 이미 정해져 있습니다: 훅, 권한 허용 목록, 스킬, 검토용 에이전트, 선언 설정 파일입니다.</p>
+        <p class="next-d">나머지 세 작업이 이 배포 스크립트 위에 올라갑니다. 배포 대상 8가지는 설계 §7-4에 있고, <strong>M0에서 넣는 것은 다섯</strong>입니다 — 훅 스크립트, 훅 선언, 권한 허용 목록, 선언 설정, 매니페스트. 스킬과 검토용 에이전트는 M2에서 늘어납니다.</p>
       </div>
       <div class="next-card">
         <div class="next-n">2</div>
