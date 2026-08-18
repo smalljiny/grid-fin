@@ -29,7 +29,7 @@
 <b>외부 원장을 요구하는 단계는 셋뿐</b>이다.</p>
 
 <figure>
-<svg viewBox="0 0 980 1264" role="img" aria-label="하네스 설치부터 정리까지의 시퀀스 다이어그램. 하네스·로컬·원격 DB·GitHub 네 참여자 사이의 메시지로 열네 단계를 그린다. 검토가 다섯 단계에 있고 하드 차단은 일곱이며 그중 둘이 설치 단계에, 둘이 구현 단계에 있다. 리뷰 넷은 차단이 아니라 라운드 상한이다.">
+<svg viewBox="0 0 980 1264" role="img" aria-label="하네스 설치부터 정리까지의 시퀀스 다이어그램. 하네스·로컬·원격 DB·GitHub 네 참여자 사이의 메시지로 열네 단계를 그린다. 검토가 다섯 단계에 있고 하드 차단은 일곱이며 그중 둘이 착수 단계에, 둘이 구현 단계에 있다. 리뷰 넷은 차단이 아니라 라운드 상한이다.">
   <defs>
     <marker id="x1a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
@@ -64,9 +64,9 @@
   <text x="338" y="103" text-anchor="middle" font-size="11">배포물 — 목록은 §7-4</text>
   <text x="452" y="114" font-size="12.5" fill="var(--accent)" font-weight="700">★ 배선 검증</text>
   <line x1="242" y1="146" x2="434" y2="146" stroke="currentColor" stroke-width="1.5" marker-end="url(#x1a)"/>
-  <text x="338" y="139" text-anchor="middle" font-size="11">핀 기록 — <tspan font-weight="600">git 추적 대상으로</tspan></text>
+  <text x="338" y="139" text-anchor="middle" font-size="11">핀 기록 — <tspan font-weight="600">매니페스트에</tspan></text>
   <text x="338" y="164" text-anchor="middle" font-size="10.5" fill="var(--muted)">sha(재현) + contentHash(드리프트) 두 필드</text>
-  <text x="452" y="150" font-size="12.5" fill="var(--accent)" font-weight="700">★ 추적 확인</text>
+  <text x="452" y="150" font-size="10.5" fill="var(--muted)">추적하지 않는다(원장 S26)</text>
   <line x1="20" y1="184" x2="960" y2="184" stroke="currentColor" opacity=".13"/>
   <text x="164" y="220" text-anchor="end" font-size="13" font-weight="650">① 초기화</text>
   <text x="164" y="236" text-anchor="end" font-size="10.5" fill="var(--muted)">프로젝트 × 머신 1회</text>
@@ -89,6 +89,7 @@
   <line x1="242" y1="396" x2="834" y2="396" stroke="var(--net)" stroke-width="1.8" marker-end="url(#x1n)"/>
   <text x="538" y="389" text-anchor="middle" font-size="11" fill="var(--net)">이슈 본문 = 작업 스펙</text>
   <text x="856" y="400" font-size="12.5" fill="var(--accent)" font-weight="700">★</text>
+  <text x="452" y="452" font-size="12.5" fill="var(--accent)" font-weight="700">★ 배포물 확인 — 주입됐는가(원장 S26)</text>
   <line x1="242" y1="426" x2="434" y2="426" stroke="currentColor" stroke-width="1.5" marker-end="url(#x1a)"/>
   <text x="338" y="419" text-anchor="middle" font-size="11">워크트리 생성 · 설정 복제 · 스펙 캐시</text>
   <text x="338" y="444" text-anchor="middle" font-size="10.5" fill="var(--muted)">&lt;project&gt;.worktrees/&lt;issue&gt;-&lt;slug&gt;</text>
@@ -130,14 +131,13 @@
   <text x="338" y="853" text-anchor="middle" font-size="11">브랜치 전체 — <tspan font-weight="600">라운드 상한</tspan></text>
   <text x="338" y="878" text-anchor="middle" font-size="10.5" fill="var(--muted)">⑦의 PR 리뷰와 합치지 않는다(원장 S15)</text>
   <line x1="20" y1="898" x2="960" y2="898" stroke="currentColor" opacity=".13"/>
-  <text x="164" y="932" text-anchor="end" font-size="13" font-weight="650">⑥ 상태 전이</text>
+  <text x="164" y="932" text-anchor="end" font-size="13" font-weight="650">⑥ 상태 확인</text>
   <text x="164" y="948" text-anchor="end" font-size="10.5" fill="var(--muted)">스킬이 아니라 스크립트</text>
-  <line x1="242" y1="928" x2="834" y2="928" stroke="var(--net)" stroke-width="1.8" marker-end="url(#x1n)"/>
-  <text x="538" y="921" text-anchor="middle" font-size="11" fill="var(--net)">전이표 검증 → <tspan font-weight="600">상태 라벨 교체</tspan></text>
-  <text x="856" y="932" font-size="12.5" fill="var(--accent)" font-weight="700">★</text>
-  <line x1="834" y1="958" x2="644" y2="958" stroke="currentColor" stroke-width="1.3" stroke-dasharray="4 4" marker-end="url(#x1a)"/>
-  <text x="739" y="951" text-anchor="middle" font-size="11" fill="var(--muted)">미러</text>
-  <text x="338" y="958" text-anchor="middle" font-size="10.5" fill="var(--muted)">저장하지 않는다 — 산출물에서 계산한다</text>
+  <line x1="242" y1="928" x2="434" y2="928" stroke="currentColor" stroke-width="1.5" marker-end="url(#x1a)"/>
+  <text x="338" y="921" text-anchor="middle" font-size="11">산출물 조회 → <tspan font-weight="600">상태 계산</tspan></text>
+  <text x="338" y="946" text-anchor="middle" font-size="10.5" fill="var(--muted)">저장하지 않는다 — 옮길 상태가 없다(원장 S12)</text>
+  <text x="620" y="932" font-size="10.5" fill="var(--muted)">★가 없다 — 만들어야 존재하므로</text>
+  <text x="620" y="948" font-size="10.5" fill="var(--muted)">불가능한 전이가 원리적으로 생기지 않는다</text>
   <line x1="20" y1="978" x2="960" y2="978" stroke="currentColor" opacity=".13"/>
 
   <text x="164" y="1012" text-anchor="end" font-size="13" font-weight="650">⑥′ 정본 반영</text>
@@ -183,7 +183,7 @@
 ⓪ · ③ · ⑦ <b>셋</b>이고, ①(갱신분)과 ③′(지적 반영 시)는 <b>조건부</b>다. <b>⑥은 산출물 계산이라 git만으로 끝난다</b>(원장 S12).
 <b>⑤ 구현 루프는 왼쪽으로만 뻗는다.</b>
 <br><br>
-<b>★는 하드 차단만 센다 — 일곱이고 그중 둘이 ⓪에, 둘이 ⑤에 있다.</b>
+<b>★는 하드 차단만 센다 — 일곱이고 그중 둘이 ③에, 둘이 ⑤에 있다.</b>
 리뷰 넷(③′·④′·⑤′·⑦)은 <b>판단이 필요해 오탐이 있으므로 ★가 아니라 라운드 상한</b>이다.
 <b>되돌림이 싼 단계일수록 위에 있고, ③′·④′가 가장 싸다.</b>
 </figcaption>
