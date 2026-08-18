@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>grid fin 구현 로드맵 — 어디까지 왔고 무엇이 남았나</title>
+<title>grid fin 구현 로드맵</title>
 <style>
   :root {
     --bg: #f4f5f9;
@@ -522,16 +522,16 @@
 
 <div class="wrap">
   <header>
-    <p class="eyebrow">grid fin · 개인용 개발 하네스 · 2026-08-13 · <strong>구현 착수 직전</strong></p>
-    <h1>지금 어디에 있나 — grid fin 구현 로드맵</h1>
-    <p class="lede">조사와 설계가 끝났고 코드는 아직 없습니다. <strong>착수를 막는 항목은 0건</strong>입니다. 다음은 하네스를 직접 만들어 grid fin 저장소 자신에 배포하는 일이고, 그 배포가 끝나는 순간부터 하네스가 자기 개발을 감독합니다.</p>
-    <p class="lede" style="margin-top:8px"><strong>기준선</strong> — 조사 31편 · 설계 드래프트 5편 · 미결 44건 해소 · 남은 미결 23건. <strong>이 로드맵이 정하는 것은 순서이지 일정이 아닙니다.</strong> 개인 규모에서 이 설계를 통계로 검증할 방법이 없기 때문에(<a href="../research/evaluation.md">평가 조사 §1.5</a>) 남은 검증은 워크플로를 처음부터 끝까지 한 번 실행해 보는 것뿐이고, 그것이 M1입니다.</p>
+    <p class="eyebrow">grid fin · 개인용 개발 하네스 · 2026-08-18 · <strong>구현 착수 직전</strong></p>
+    <h1>grid fin 구현 로드맵</h1>
+    <p class="lede">조사와 설계는 끝났고, 구현 코드는 아직 없습니다. 현재 <strong>착수를 막는 미결 항목은 없습니다.</strong> 다음 단계는 하네스의 최소 기반을 만들고, 그것을 grid fin 저장소에 직접 배포하는 일입니다. 그 뒤부터는 하네스가 자기 개발 과정에도 적용됩니다.</p>
+    <p class="lede" style="margin-top:8px"><strong>현재 기준선</strong> — 조사 31편, 설계 드래프트 5편, 해소한 미결 44건, 남은 미결 23건입니다. <strong>이 문서는 일정표가 아니라 실행 순서를 정리한 로드맵입니다.</strong> 개인 프로젝트 규모에서는 통계적으로 설계를 검증하기 어렵기 때문에(<a href="../research/evaluation.md">평가 조사 §1.5</a>), 실제 검증은 워크플로를 처음부터 끝까지 한 번 실행하는 M1에서 시작합니다.</p>
 
     <!-- ══ HERO 진행 상황 ══ -->
     <div class="orbit">
       <div class="orbit-head">
         <h2>진행 상황</h2>
-        <span class="tag">설계 → M4 · 관문 3</span>
+        <span class="tag">설계부터 M4까지 · 관문 3개</span>
         <span class="pct"><b>1 / 5</b> 구간 (설계 완료)</span>
       </div>
 
@@ -596,13 +596,13 @@
           <div class="st gate locked">
             <div class="node"><span>◆</span></div>
             <div class="st-id">CP3</div>
-            <div class="st-lbl">두 곳에서 돈다</div>
+            <div class="st-lbl">두 저장소에서 실행</div>
           </div>
 
           <div class="st todo">
             <div class="node">0/3</div>
             <div class="st-id">M4</div>
-            <div class="st-lbl">관측 반영</div>
+            <div class="st-lbl">확인 결과 반영</div>
             <div class="st-bar"><i style="width:0%"></i></div>
           </div>
         </div>
@@ -621,27 +621,27 @@
     <!-- ══ 현재 위치 3-카드 ══ -->
     <div class="status">
       <div class="s-card past">
-        <div class="s-k">방금 끝낸 것</div>
+        <div class="s-k">완료한 일</div>
         <div class="s-t">설계와 미결 정리</div>
-        <p class="s-d">계층 넷 · 상태 다섯 · 판정 4상태 · 어댑터 다섯 슬롯 · 실행 14단계가 <a href="../draft/overview.html">드래프트 5편</a>에 확정됐습니다. 마지막 세 건은 <strong>스킬 기준선</strong>(조건 선언 + 실제 실행 확인) · <strong>차용 방식</strong>(각 단계에서 그때 점검) · <strong>기존 하네스를 설치하지 않는다</strong>입니다.</p>
+        <p class="s-d"><a href="../draft/overview.html">설계 드래프트 5편</a>에서 계층 4개, 상태 5개, 판정 4상태, 어댑터 슬롯 5개, 실행 단계 14개를 정리했습니다. 마지막으로 닫은 결정은 <strong>스킬 기준선</strong>, <strong>기존 하네스 차용 방식</strong>, <strong>기존 하네스를 설치하지 않는다는 원칙</strong>입니다.</p>
       </div>
       <div class="s-card here">
-        <div class="s-k">지금 할 것 — M0</div>
-        <div class="s-t">기반 네 가지</div>
+        <div class="s-k">지금 할 일 — M0</div>
+        <div class="s-t">최소 기반 네 가지</div>
         <ul class="s-list">
           <li>배포 스크립트</li>
-          <li>훅 스크립트 넷 (한꺼번에 켠다)</li>
+          <li>훅 스크립트 네 개</li>
           <li>선언 설정 파일</li>
           <li>Python 검사 어댑터 하나</li>
         </ul>
       </div>
       <div class="s-card nextup">
-        <div class="s-k">그다음 — CP1</div>
-        <div class="s-t">배포하고 하드 차단 둘 확인</div>
+        <div class="s-k">다음 관문 — CP1</div>
+        <div class="s-t">배포 후 핵심 차단 조건 확인</div>
         <ul class="s-list">
-          <li>배선 검증이 실제로 막는가</li>
-          <li>배포물이 git에 추적되는가</li>
-          <li>이 관문 뒤로는 모든 작업이 게이트를 탄다</li>
+          <li>훅 등록 확인이 실제로 실패를 잡는가</li>
+          <li>매니페스트가 배포 내용을 기록하는가</li>
+          <li>이 관문 뒤의 모든 작업이 게이트를 통과하는가</li>
         </ul>
       </div>
     </div>
@@ -650,10 +650,10 @@
   <!-- ══ 구간 의존 ══ -->
   <section class="sec" aria-label="구간 의존 관계">
     <div class="sec-head">
-      <h2>무엇이 무엇을 막는가</h2>
-      <span class="sec-tag">dependency · 굵은 선 = 되돌릴 수 없는 관문</span>
+      <h2>구간 의존 관계</h2>
+      <span class="sec-tag">dependency · 관문을 지나면 되돌리려면 배포를 걷어내야 함</span>
     </div>
-    <p class="sec-note">M0만 하네스 없이 직접 만듭니다. CP1을 지나면 그 뒤의 모든 작업이 게이트를 통과해야 하고, 되돌리려면 배포를 걷어내야 합니다. M2와 M3은 서로를 기다리지 않습니다.</p>
+    <p class="sec-note">M0만 하네스 없이 직접 만듭니다. CP1을 지나면 이후 작업은 모두 하네스 게이트를 통과해야 합니다. M2와 M3은 병렬로 진행할 수 있지만, M4로 가기 전에는 둘 다 끝나야 합니다.</p>
 
     <div class="graph-box">
       <div class="graph-scroll">
@@ -669,7 +669,7 @@
           <rect x="196" y="30" width="546" height="240" rx="12" fill="none"
                 stroke="currentColor" stroke-width="1.1" stroke-dasharray="5 4" opacity=".38"/>
           <text x="734" y="52" text-anchor="end" font-size="11" fill="currentColor" opacity=".62"
-                font-family="ui-monospace, monospace">CP1 이후 — 하네스 위에서 돈다</text>
+                font-family="ui-monospace, monospace">CP1 이후 — 하네스가 적용되는 구간</text>
 
           <!-- 간선 -->
           <g stroke="currentColor" stroke-width="1.5" fill="none" opacity=".55">
@@ -713,7 +713,7 @@
           </g>
 
           <text x="446" y="252" text-anchor="middle" font-size="11.5" fill="var(--ink-3)"
-                font-family="system-ui, sans-serif">CP2는 M1 끝에, CP3은 M4 앞에 있습니다 — 아래 상세 참고</text>
+                font-family="system-ui, sans-serif">CP2는 M1을 닫는 관문이고, CP3은 M2와 M3을 M4에 연결합니다.</text>
         </svg>
       </div>
       <div class="g-legend">
@@ -731,7 +731,7 @@
       <h2>구간 상세</h2>
       <span class="sec-tag">milestones · gates</span>
     </div>
-    <p class="sec-note">각 구간의 카드는 그 구간에서 만드는 것입니다. 무엇을 참고 하네스에서 가져올지는 <strong>여기서 정하지 않고 각 작업을 시작할 때 그 스킬을 열어보고 판정합니다</strong>(<a href="../draft/open-questions.md">미결 목록 S25</a>).</p>
+    <p class="sec-note">각 카드는 해당 구간에서 만들 산출물입니다. 참고 하네스의 어떤 스킬을 가져올지는 이 문서에서 미리 확정하지 않습니다. 각 작업을 시작할 때 필요한 스킬만 열어 보고, 그대로 쓸지 수정할지 새로 만들지 판단합니다(<a href="../draft/open-questions.md">미결 목록 S25</a>).</p>
 
     <div class="track">
 
@@ -745,17 +745,17 @@
           <div class="card d">
             <div class="card-top"><span class="chip d">완료</span><span class="card-title">조사 31편</span></div>
             <div class="kv"><span class="k">범위</span><span class="v">강제 기제 · 평가 · 컨텍스트 · 보안 · 배포 · 상태 관리 · 프롬프트 평가</span></div>
-            <div class="kv"><span class="k">관습</span><span class="v">주장마다 근거와 등급. 각 문서 끝에 <strong>재지 않은 것</strong>을 남깁니다</span></div>
+            <div class="kv"><span class="k">원칙</span><span class="v">주장마다 근거와 신뢰도를 적고, 각 문서 끝에는 <strong>아직 확인하지 않은 것</strong>을 남깁니다</span></div>
           </div>
           <div class="card d">
             <div class="card-top"><span class="chip d">완료</span><span class="card-title">설계 드래프트 5편</span></div>
             <div class="kv"><span class="k">축</span><span class="v"><a href="../draft/overview.html">개요</a> · <a href="../draft/layers.html">계층</a> · <a href="../draft/judgment.html">판정</a> · <a href="../draft/flow.html">흐름</a> · <a href="../draft/storage.html">저장</a></span></div>
-            <div class="kv"><span class="k">핵심</span><span class="v">계층 넷 · 상태 다섯 · 하드 차단 일곱 · 실행 14단계 · 정본 넷</span></div>
+            <div class="kv"><span class="k">핵심</span><span class="v">계층 4개 · 상태 5개 · 하드 차단 7개 · 실행 14단계 · 정본 4개</span></div>
           </div>
           <div class="card d">
             <div class="card-top"><span class="chip d">완료</span><span class="card-title">미결 44건 해소</span></div>
             <div class="kv"><span class="k">남음</span><span class="v">23건 — <strong>착수를 막는 것은 0건</strong></span></div>
-            <div class="kv rest"><span class="k">최근</span><span class="v">스킬 기준선 · 차용 방식 · 기존 하네스 미설치</span></div>
+            <div class="kv rest"><span class="k">최근 결정</span><span class="v">스킬 기준선 · 기존 하네스 차용 방식 · 기존 하네스 미설치</span></div>
           </div>
         </div>
       </div>
@@ -770,24 +770,24 @@
         <div class="cards">
           <div class="card t">
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title">배포 스크립트</span></div>
-            <div class="kv"><span class="k">하는 일</span><span class="v">하네스 저장소의 파일을 프로젝트에 설치하고 버전을 고정합니다</span></div>
-            <div class="kv rest"><span class="k">왜 먼저</span><span class="v">이것이 없으면 훅이 배선되지 않고, 배선이 없으면 아무것도 강제되지 않습니다</span></div>
+            <div class="kv"><span class="k">하는 일</span><span class="v">하네스 저장소의 파일을 대상 프로젝트에 설치하고, 설치한 버전을 기록합니다</span></div>
+            <div class="kv rest"><span class="k">이유</span><span class="v">배포가 되어야 훅을 설정에 등록할 수 있고, 훅이 등록되어야 이후 작업을 강제할 수 있습니다</span></div>
           </div>
           <div class="card t">
-            <div class="card-top"><span class="chip t">미착수</span><span class="card-title">훅 스크립트 넷</span></div>
-            <div class="kv"><span class="k">무엇</span><span class="v">세션 시작 · 쓰기 직전 · 커밋 직전 · 쓴 뒤 포맷</span></div>
-            <div class="kv rest"><span class="k">한꺼번에</span><span class="v">하나씩 켜지 않습니다. 배선 검증이 넷 다 붙었는지 보는 방식이라 부분 배선은 통과하지 못합니다</span></div>
+            <div class="card-top"><span class="chip t">미착수</span><span class="card-title">훅 스크립트 네 개</span></div>
+            <div class="kv"><span class="k">대상</span><span class="v">세션 시작 · 파일 쓰기 직전 · 커밋 직전 · 파일을 쓴 뒤 포맷</span></div>
+            <div class="kv rest"><span class="k">방식</span><span class="v">네 훅을 따로 켜지 않습니다. 훅 등록 확인은 네 훅이 모두 설정에 등록되어야 통과합니다</span></div>
           </div>
           <div class="card t">
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title">선언 설정 파일</span></div>
-            <div class="kv"><span class="k">하는 일</span><span class="v">언어별로 어떤 검사를 돌릴지, 검사를 만들지 않은 것은 무엇인지 적습니다</span></div>
-            <div class="kv rest"><span class="k">중요</span><span class="v">선언되지 않은 부재는 <strong>결손</strong>이고 통과가 아닙니다. 선언된 부재만 정상입니다</span></div>
-            <div class="kv rest"><span class="k">완료 조건</span><span class="v"><strong>설정 계약을 확정합니다</strong> — 검사 도구 설치 방법 · 결과 스키마 · 도구 버전 관리 · 검사 종류별 스키마를 담을 수 있어야 합니다(미결 목록 Q40). <strong>값은 이 구간에서 정하되 형식은 여기서 닫습니다</strong> — 나중에 늘리면 어댑터까지 다시 만듭니다</span></div>
+            <div class="kv"><span class="k">하는 일</span><span class="v">언어별로 어떤 검사를 실행할지, 만들지 않는 검사는 무엇인지 적습니다</span></div>
+            <div class="kv rest"><span class="k">중요</span><span class="v">검사가 없는 이유를 선언하지 않으면 <strong>결손</strong>으로 봅니다. 이유를 적은 부재만 정상으로 취급합니다</span></div>
+            <div class="kv rest"><span class="k">완료 조건</span><span class="v"><strong>설정 파일의 형식을 닫습니다</strong> — 검사 도구 설치 방법, 결과 스키마, 도구 버전 관리, 검사 종류별 스키마를 담을 수 있어야 합니다(미결 목록 Q40). 값은 M0에서 정하되, 형식은 이 구간에서 확정합니다</span></div>
           </div>
           <div class="card t">
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title">Python 검사 어댑터</span></div>
-            <div class="kv"><span class="k">왜 Python</span><span class="v">grid fin 저장소에 파이썬 스크립트가 있으므로 여기서 실제로 돕니다</span></div>
-            <div class="kv rest"><span class="k">최소로</span><span class="v">어댑터 하나로 시작하고 나머지 언어는 <strong>검사를 만들지 않았다</strong>고 선언합니다</span></div>
+            <div class="kv"><span class="k">이유</span><span class="v">grid fin 저장소에 Python 스크립트가 있으므로, 첫 어댑터를 실제 파일에 적용해 볼 수 있습니다</span></div>
+            <div class="kv rest"><span class="k">범위</span><span class="v">처음에는 어댑터 하나만 만듭니다. 나머지 언어는 <strong>검사를 만들지 않았다고 선언</strong>합니다</span></div>
           </div>
         </div>
       </div>
@@ -796,16 +796,16 @@
         <div class="cp-head">
           <span class="cp-mark">◆</span>
           <span class="cp-id">CP1</span>
-          <span class="cp-title">하네스가 자기 자신에 붙는다</span>
+          <span class="cp-title">하네스를 grid fin에 적용한다</span>
           <span class="cp-when">되돌리려면 배포를 걷어내야 함</span>
         </div>
-        <p class="cp-desc">M0 산출물을 grid fin 저장소에 배포합니다. 이 관문을 지나면 <strong>이후 제가 하는 모든 작업이 게이트를 통과해야 합니다.</strong> 스킬은 하나도 없어도 됩니다 — 강제하는 것은 훅과 설정이고, 스킬은 절차를 안내할 뿐입니다.</p>
+        <p class="cp-desc">M0에서 만든 산출물을 grid fin 저장소에 배포합니다. 이 관문을 지나면 <strong>이후 작업은 모두 게이트를 통과해야 합니다.</strong> 스킬은 아직 없어도 됩니다. 실제로 강제하는 것은 훅과 설정이고, 스킬은 절차를 안내하는 역할입니다.</p>
         <div class="gates">
-          <span class="gate held">배선 검증 — 훅 넷이 실제로 붙었는가</span>
+          <span class="gate held">훅 등록 확인 — 훅 네 개가 설정에 등록됐는가</span>
           <span class="gate held">매니페스트가 제자리에 있는가 — 무엇을 배포했는지 기록됐는가</span>
           <span class="gate held">파이썬 파일 쓰기가 게이트를 타는가</span>
         </div>
-        <p class="cp-foot"><b>배포물 확인은 여기서 돌지 않습니다</b> — 아직 워크트리가 없어 대조할 대상이 없습니다. 검사는 M0에서 만들고 <b>처음 도는 것은 M1에서 첫 워크트리를 만들 때</b>입니다.<br><br><b>그때 대조 기준은 매니페스트입니다</b> — 배포 스크립트가 무엇을 넣었는지 거기 적으므로, 그 목록과 워크트리를 맞춰 봅니다. <b>고정 목록을 따로 두지 않는 이유</b>는 배포 단위가 늘 때마다 문서 두 곳을 고쳐야 하기 때문입니다. 스킬이 0개면 0개로 일치하고, M2에서 늘어도 같은 검사가 그대로 돕니다.<br><br><b>여기를 먼저 통과하는 이유</b> — 이 두 가지가 참고 하네스에서 실제로 무너졌던 지점입니다. 설정 파일이 워크트리에 따라가지 않아 게이트가 통째로 사라졌습니다. <b>위험 대비</b> — 첫 배포 대상이 문서만 있는 저장소라 망가져도 되돌리기 쉽습니다. 배포 전 백업을 남깁니다.</p>
+        <p class="cp-foot"><b>배포물 확인은 CP1에서 실행하지 않습니다.</b> 아직 작업 워크트리가 없어서 대조할 대상이 없기 때문입니다. 검사는 M0에서 만들고, 처음 실행하는 시점은 M1에서 첫 워크트리를 만들 때입니다.<br><br><b>그때의 대조 기준은 매니페스트입니다.</b> 배포 스크립트가 설치한 항목을 매니페스트에 기록하고, 이후 검사는 그 목록과 실제 워크트리를 비교합니다. 고정 목록을 문서에 따로 두지 않는 이유는 배포 단위가 늘 때마다 여러 문서를 함께 고쳐야 하는 일을 피하기 위해서입니다. 스킬이 0개면 0개로 일치하고, M2에서 스킬이 늘어도 같은 검사를 그대로 사용할 수 있습니다.<br><br><b>CP1을 먼저 두는 이유</b> — 참고 하네스에서는 설정 파일이 워크트리에 따라가지 않아 게이트가 통째로 사라진 적이 있습니다. 이번에는 grid fin 저장소에 먼저 적용해 보고, 배포 전 백업을 남겨 되돌릴 수 있게 합니다.</p>
       </div>
 
       <div class="ms">
@@ -818,17 +818,17 @@
           <div class="card t">
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title">가장 작은 규모로 한 번</span></div>
             <div class="kv"><span class="k">규모</span><span class="v">큰 묶음 1개 → 작업 단위 1개 → 커밋 2~3개</span></div>
-            <div class="kv rest"><span class="k">대상</span><span class="v"><strong>스킬을 작성하는 일 자체</strong>입니다. 스킬 기준선 방식의 대가 세 가지가 여기서만 관측됩니다</span></div>
+            <div class="kv rest"><span class="k">대상</span><span class="v"><strong>스킬을 작성하는 작업 자체</strong>입니다. 스킬 기준선 방식에는 대가가 3개 있는데, 그중 판정이 다음 실행으로 밀리는 문제는 이 작업에서만 확인할 수 있습니다</span></div>
           </div>
           <div class="card t">
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title">검토는 사람이 직접</span></div>
-            <div class="kv"><span class="k">무엇</span><span class="v">스펙 검토 · 계획 검토 · 작업 단위 검토 셋</span></div>
-            <div class="kv rest"><span class="k">왜</span><span class="v">검토를 자동화하지 않아도 <strong>검토 기록 커밋</strong>만 남기면 상태 관리가 정상적으로 돌아갑니다. 자동화는 M2입니다</span></div>
+            <div class="kv"><span class="k">대상</span><span class="v">스펙 검토 · 계획 검토 · 작업 단위 검토</span></div>
+            <div class="kv rest"><span class="k">이유</span><span class="v">아직 검토를 자동화하지 않아도 됩니다. 사람이 검토하고 <strong>검토 기록 커밋</strong>만 남기면 상태 계산은 정상적으로 동작합니다. 자동화는 M2에서 합니다</span></div>
           </div>
           <div class="card t">
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title">상태 계산 스크립트</span></div>
-            <div class="kv"><span class="k">하는 일</span><span class="v">산출물을 조회해 지금 상태를 계산합니다. 상태를 저장하지 않습니다</span></div>
-            <div class="kv rest"><span class="k">재료</span><span class="v">전부 작업 브랜치의 git 안에 있습니다 — 기준선 기록 · 게이트 통과 · 검토 기록 · 머지 커밋</span></div>
+            <div class="kv"><span class="k">하는 일</span><span class="v">커밋과 PR 기록을 조회해 현재 상태를 계산합니다. 상태값을 별도로 저장하지 않습니다</span></div>
+            <div class="kv rest"><span class="k">재료</span><span class="v">기준선 기록 · 게이트 통과 기록 · 검토 기록 · 머지 커밋이 모두 작업 브랜치와 git 이력에 남습니다</span></div>
           </div>
         </div>
       </div>
@@ -837,16 +837,16 @@
         <div class="cp-head">
           <span class="cp-mark">◆</span>
           <span class="cp-id">CP2</span>
-          <span class="cp-title">전체 실행 완료</span>
-          <span class="cp-when">설계 검증의 유일한 수단</span>
+          <span class="cp-title">첫 전체 실행 완료</span>
+          <span class="cp-when">설계를 실제로 확인하는 첫 관문</span>
         </div>
-        <p class="cp-desc">개인 규모에서 이 설계를 통계로 검증할 방법이 없습니다. 구성요소 하나를 더하는 변경의 효과를 재려면 문항이 약 2,000개 필요한데 성립하지 않습니다. <strong>남는 검증은 실제로 아파 보는 것뿐이고 이 관문이 그것입니다.</strong></p>
+        <p class="cp-desc">개인 프로젝트 규모에서는 이 설계를 통계적으로 검증하기 어렵습니다. 구성요소 하나의 효과를 따로 측정하려면 현실적으로 너무 많은 표본이 필요합니다. 따라서 이 관문에서는 실제로 한 번 끝까지 실행해 보며 설계의 약점을 확인합니다.</p>
         <div class="gates">
           <span class="gate held">PR이 머지됐는가</span>
           <span class="gate held">정합성 판정 기록이 있는가</span>
-          <span class="gate held">M1에서 관측되는 다섯을 기록했는가</span>
+          <span class="gate held">M1에서 확인할 다섯 항목을 기록했는가</span>
         </div>
-        <p class="cp-foot"><b>관찰 항목 여섯 중 다섯은 전체 실행을 한 번 하면 저절로 마주칩니다</b> — 전이 권한 · 판정 방식 · 검토 역할 분리 · 빌드 깨짐 허용 · 훅 충돌. <b>나머지 하나(모노레포 유인)는 두 언어를 쓰는 M3에서만 나타나므로 여기서 요구하지 않습니다.</b> 여섯 다 참고 하네스에서 한 번도 돌아본 적 없는 것들입니다. <b>여기서 나온 다섯이 M4의 임계값 중 검토 반복 상한과 계수기 쪽을 정합니다</b> — 커버리지 규칙은 두 언어가 있어야 정해지므로 M3 이후입니다.</p>
+        <p class="cp-foot"><b>관찰 항목 여섯 중 다섯은 첫 전체 실행에서 확인할 수 있습니다.</b> 전이 권한, 판정 방식, 검토 역할 분리, 빌드 깨짐 허용, 훅 충돌입니다. <b>나머지 하나인 모노레포 유인은 두 언어를 함께 쓰는 M3에서 확인합니다.</b> 다섯 항목의 기록은 M4에서 검토 반복 상한과 계수기 규칙을 정할 때 사용합니다. 커버리지 규칙은 두 언어가 모두 있어야 판단할 수 있으므로 M3 이후에 정합니다.</p>
       </div>
 
       <div class="ms">
@@ -857,15 +857,15 @@
         </div>
         <div class="cards">
           <div class="card t">
-            <div class="card-top"><span class="chip t">미착수</span><span class="card-title">검토용 서브에이전트 넷</span></div>
-            <div class="kv"><span class="k">주의</span><span class="v">가이드가 위임을 제한하라고 하지만 그것은 비용 항목의 예시입니다. 이 넷은 자기 재확인이 아니라 <strong>다른 관점의 검토</strong>라 유효합니다</span></div>
-            <div class="kv rest"><span class="k">고칠 것</span><span class="v">검토 프롬프트에 <strong>심각한 것만 보고하라</strong>가 있으면 뺍니다. 전부 보고하게 하고 거르는 것은 별도 단계에서 합니다</span></div>
+            <div class="card-top"><span class="chip t">미착수</span><span class="card-title">검토용 서브에이전트 네 개</span></div>
+            <div class="kv"><span class="k">주의</span><span class="v">가이드는 불필요한 위임을 줄이라고 하지만, 여기서의 위임은 자기 답 재확인이 아닙니다. 서로 다른 관점의 검토를 분리하기 위한 것입니다</span></div>
+            <div class="kv rest"><span class="k">수정</span><span class="v">검토 프롬프트에서 <strong>심각한 것만 보고하라</strong>는 식의 제한을 제거합니다. 먼저 모두 보고하게 하고, 차단 여부는 별도 단계에서 판단합니다</span></div>
           </div>
           <div class="card t">
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title">스킬 정비</span></div>
-            <div class="kv"><span class="k">범위</span><span class="v"><strong>워크플로 절차 스킬만</strong> 다룹니다. 기술 스택별 스킬은 M3에서 스택이 정해진 뒤로 미룹니다 — 그래야 M2와 M3이 서로를 기다리지 않습니다</span></div>
-            <div class="kv"><span class="k">차용</span><span class="v">참고 하네스의 해당 스킬을 열어보고 판정합니다 — 그대로 / 수정 / 새로 작성 / 사용 안 함</span></div>
-            <div class="kv rest"><span class="k">새로 쓸 것</span><span class="v"><code>stack-prompt</code>는 점수를 반복해서 올리는 구조라 이 설계와 반대입니다. 고치지 않고 새로 씁니다</span></div>
+            <div class="kv"><span class="k">범위</span><span class="v"><strong>워크플로 절차 스킬만</strong> 다룹니다. 기술 스택별 스킬은 M3에서 스택을 정한 뒤에 다룹니다. 그래야 M2와 M3을 병렬로 진행할 수 있습니다</span></div>
+            <div class="kv"><span class="k">차용</span><span class="v">참고 하네스의 해당 스킬을 열어 보고, 그대로 사용할지 수정할지 새로 만들지 사용하지 않을지 판단합니다</span></div>
+            <div class="kv rest"><span class="k">예외</span><span class="v"><code>stack-prompt</code>는 점수를 반복해서 올리는 구조라 이 설계와 맞지 않습니다. 수정하지 않고 새로 작성합니다</span></div>
           </div>
         </div>
       </div>
@@ -879,17 +879,17 @@
         <div class="cards">
           <div class="card t">
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title">스택 결정</span></div>
-            <div class="kv"><span class="k">조건</span><span class="v">가장 많이 쓰는 스택. <strong>빈 프로젝트는 안 됩니다</strong> — 검사할 코드도 테스트도 없으면 게이트가 전부 부재로 나옵니다</span></div>
-            <div class="kv rest"><span class="k">딸림</span><span class="v">여기가 정해져야 참고 하네스의 프레임워크 스킬 11개 중 무엇이 필요한지 판단됩니다</span></div>
+            <div class="kv"><span class="k">조건</span><span class="v">평소에 가장 많이 쓰는 스택을 선택합니다. <strong>빈 프로젝트는 제외합니다.</strong> 검사할 코드와 테스트가 없으면 게이트가 모두 부재로 처리되기 때문입니다</span></div>
+            <div class="kv rest"><span class="k">영향</span><span class="v">이 선택이 끝나야 참고 하네스의 프레임워크 스킬 11개 중 무엇이 필요한지 판단할 수 있습니다</span></div>
           </div>
           <div class="card t">
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title">TypeScript 어댑터</span></div>
-            <div class="kv"><span class="k">왜 필요</span><span class="v">어댑터가 하나뿐이면 공통 인터페이스가 진짜 추상화인지 알 수 없습니다. 둘이면 정규화되지 않는 것이 즉시 드러납니다</span></div>
-            <div class="kv rest"><span class="k">예</span><span class="v">종료 코드 · 커버리지 지표 · 순환 검사 도구가 언어마다 다릅니다</span></div>
+            <div class="kv"><span class="k">이유</span><span class="v">어댑터가 하나뿐이면 공통 인터페이스가 실제로 일반화되는지 알 수 없습니다. 두 언어를 지원하면 정규화되지 않은 부분이 드러납니다</span></div>
+            <div class="kv rest"><span class="k">차이</span><span class="v">종료 코드, 커버리지 지표, 순환 검사 도구가 언어마다 다릅니다</span></div>
           </div>
           <div class="card t">
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title">배포하고 전체 실행</span></div>
-            <div class="kv"><span class="k">확인</span><span class="v">grid fin 저장소보다 큰 규모에서 게이트가 실제로 작동하는지</span></div>
+            <div class="kv"><span class="k">확인</span><span class="v">grid fin보다 큰 실제 프로젝트에서도 게이트가 의도대로 작동하는지 확인합니다</span></div>
           </div>
         </div>
       </div>
@@ -898,40 +898,40 @@
         <div class="cp-head">
           <span class="cp-mark">◆</span>
           <span class="cp-id">CP3</span>
-          <span class="cp-title">두 곳에서 돈다</span>
+          <span class="cp-title">두 저장소에서 실행한다</span>
           <span class="cp-when">M2와 M3을 함께 닫는다</span>
         </div>
-        <p class="cp-desc"><b>M2와 M3이 둘 다 끝나야 지납니다.</b> 서로를 기다리지는 않지만 M4가 하는 일이 앞 구간에서 관측한 값을 반영하는 것이라, 한쪽이 비면 반영할 값이 모자랍니다.<br><br>두 프로젝트에서 각각 전체 실행이 한 번씩 되어야 하는 이유는 확인되는 것이 서로 다르기 때문입니다. grid fin 저장소에서는 스킬 조건 검사와 파이썬 검사가 돌고, 테스트 프로젝트에서는 TypeScript 검사와 실제 규모 작업이 돕니다.</p>
+        <p class="cp-desc"><b>M2와 M3이 모두 끝나야 이 관문을 지납니다.</b> 두 구간은 병렬로 진행할 수 있지만, M4는 앞 구간에서 확인한 값을 반영하는 단계이므로 한쪽 결과가 빠지면 진행할 수 없습니다.<br><br>두 저장소에서 각각 전체 실행이 필요한 이유는 확인되는 내용이 다르기 때문입니다. grid fin 저장소에서는 스킬 조건 검사와 Python 검사가 검증되고, 테스트 프로젝트에서는 TypeScript 검사와 실제 규모의 작업 흐름이 검증됩니다.</p>
         <div class="gates">
-          <span class="gate held">검토 세 단계가 서브에이전트로 돈다 (M2)</span>
+          <span class="gate held">검토 세 단계가 서브에이전트로 실행된다 (M2)</span>
           <span class="gate held">grid fin 저장소에서 전체 실행</span>
           <span class="gate held">테스트 프로젝트에서 전체 실행</span>
-          <span class="gate held">테스트하다 발견한 문제가 하네스 저장소에 반영됐는가</span>
+          <span class="gate held">테스트 중 발견한 문제가 하네스 저장소에 반영됐는가</span>
         </div>
-        <p class="cp-foot"><b>세 번째가 핵심입니다.</b> 참고 하네스에서 하네스 개선 사항의 44%가 사라졌습니다. 배포는 있었고 반대 방향 경로가 없었기 때문입니다. <b>그 경로는 양쪽을 다 쓸 때만 확인됩니다.</b></p>
+        <p class="cp-foot"><b>마지막 조건이 중요합니다.</b> 참고 하네스에서는 하네스 개선 사항의 44%가 반영되지 못했습니다. 프로젝트로 배포하는 경로는 있었지만, 프로젝트에서 발견한 문제를 하네스 저장소로 되돌리는 경로가 없었기 때문입니다. 이 반영 경로는 두 저장소를 모두 사용해 봐야 확인할 수 있습니다.</p>
       </div>
 
       <div class="ms">
         <div class="ms-head">
           <span class="ms-id">M4</span>
-          <span class="ms-name">관측한 것 반영</span>
-          <span class="ms-meta">앞 구간이 데이터를 만든 뒤 · 0/3</span>
+          <span class="ms-name">확인한 내용 반영</span>
+          <span class="ms-meta">앞 구간의 실행 기록을 본 뒤 · 0/3</span>
         </div>
         <div class="cards">
           <div class="card t">
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title">임계값 결정</span></div>
-            <div class="kv"><span class="k">무엇</span><span class="v">검토 반복 상한 · 계수기가 무엇을 세는지 · 커버리지 규칙</span></div>
-            <div class="kv rest"><span class="k">왜 나중</span><span class="v">반복이 쌓여야 의미가 생깁니다. 지금 정하면 근거 없는 숫자가 됩니다</span></div>
+            <div class="kv"><span class="k">대상</span><span class="v">검토 반복 상한 · 계수기가 세는 항목 · 커버리지 규칙</span></div>
+            <div class="kv rest"><span class="k">이유</span><span class="v">실행 기록이 쌓여야 의미 있는 값을 정할 수 있습니다. 지금 정하면 근거 없는 숫자가 됩니다</span></div>
           </div>
           <div class="card t">
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title">컨텍스트 전제 재검토</span></div>
-            <div class="kv"><span class="k">바뀐 것</span><span class="v">컨텍스트 창이 100만 토큰으로 기본이자 최대가 됐습니다. 이전 조사가 더 작은 창을 전제로 쓰였습니다</span></div>
-            <div class="kv rest"><span class="k">방법</span><span class="v">첫 실행에서 실제 사용량을 본 뒤 판단합니다</span></div>
+            <div class="kv"><span class="k">변화</span><span class="v">컨텍스트 창이 100만 토큰으로 커지면서, 이전 조사의 전제가 달라졌습니다</span></div>
+            <div class="kv rest"><span class="k">방법</span><span class="v">첫 실행에서 실제 사용량을 기록한 뒤 다시 판단합니다</span></div>
           </div>
           <div class="card t">
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title"><code>effort</code> 설정 도입</span></div>
-            <div class="kv"><span class="k">문제</span><span class="v">비용과 응답 시간의 주 제어 수단인데 설계 어디에도 없습니다</span></div>
-            <div class="kv rest"><span class="k">걸림</span><span class="v">가이드는 평가 세트로 값을 바꿔가며 재라고 하는데, 이 프로젝트는 점수 비교를 하지 않기로 정했습니다</span></div>
+            <div class="kv"><span class="k">문제</span><span class="v">비용과 응답 시간을 조절하는 주요 설정인데, 현재 설계에는 아직 없습니다</span></div>
+            <div class="kv rest"><span class="k">제약</span><span class="v">공식 가이드는 평가 세트로 값을 바꿔 보라고 하지만, 이 프로젝트는 점수 비교를 하지 않기로 했습니다</span></div>
           </div>
         </div>
       </div>
@@ -942,35 +942,35 @@
   <!-- ══ 미결 현황 ══ -->
   <section class="sec" aria-label="미결 현황">
     <div class="sec-head">
-      <h2>남은 미결 23건</h2>
+      <h2>남은 미결 항목 23건</h2>
       <span class="sec-tag">원본은 <a href="../draft/open-questions.md">open-questions.md</a> 하나</span>
     </div>
-    <p class="sec-note">이 표는 개수만 보여줍니다. 항목과 근거는 미결 목록 파일에 있습니다. <strong>착수를 막는 항목이 0건이라 지금 시작할 수 있습니다.</strong></p>
+    <p class="sec-note">이 표는 미결 항목의 개수와 성격만 보여줍니다. 각 항목의 내용과 근거는 미결 목록 파일에 있습니다. <strong>현재 착수를 막는 항목은 없습니다.</strong></p>
 
     <div class="debt-grid">
       <div class="debt-card">
         <div class="debt-top"><span class="sev">장애물</span><span class="debt-title">착수를 막는 것</span><span class="debt-num">0건</span></div>
-        <p class="debt-body">두 번 비었다가 두 번 다시 채워졌습니다. 참고 하네스 실물과 대조할 때, 그리고 프롬프트 평가 방식을 조사할 때입니다. <strong>둘 다 바깥과 대조하니 안 보이던 것이 보인 경우입니다.</strong></p>
+        <p class="debt-body">한때 비어 있었지만, 참고 하네스 실물과 프롬프트 평가 방식을 조사하면서 다시 채워졌던 적이 있습니다. 외부 자료와 실제 구현을 대조하면서 숨은 문제가 드러난 경우입니다.</p>
         <div class="debt-gate">지금은 비어 있음 → M0 착수 가능</div>
       </div>
       <div class="debt-card">
-        <div class="debt-top"><span class="sev">관찰</span><span class="debt-title">첫 실행에서 관찰할 것</span><span class="debt-num">6건</span></div>
-        <p class="debt-body">참고 하네스에서 한 번도 돌아본 적 없는 것들입니다. 결정으로 닫히지 않고 <strong>한 번 돌려봐야</strong> 닫힙니다.</p>
+        <div class="debt-top"><span class="sev">확인</span><span class="debt-title">첫 실행에서 확인할 것</span><span class="debt-num">6건</span></div>
+        <p class="debt-body">참고 하네스에서 실제로 확인한 적이 없는 항목들입니다. 문서상 결정만으로 닫을 수 없고, 워크플로를 한 번 실행해야 판단할 수 있습니다.</p>
         <div class="debt-gate">CP2에서 다섯 · 나머지 하나는 M3</div>
       </div>
       <div class="debt-card">
         <div class="debt-top"><span class="sev">결정</span><span class="debt-title">정해야 하는 것</span><span class="debt-num">13건</span></div>
-        <p class="debt-body">대부분 임계값이거나 관측이 있어야 판단됩니다. 컨텍스트 전제와 <code>effort</code> 설정도 여기 있습니다.</p>
+        <p class="debt-body">대부분은 임계값이거나 실행 기록이 있어야 판단할 수 있는 항목입니다. 컨텍스트 전제와 <code>effort</code> 설정도 여기에 포함됩니다.</p>
         <div class="debt-gate">M4에서 대부분 닫힘</div>
       </div>
       <div class="debt-card">
         <div class="debt-top"><span class="sev">보류</span><span class="debt-title">근거가 없어 보류</span><span class="debt-num">3건</span></div>
         <p class="debt-body">자료가 지지하지 않아 결정을 미룬 것들입니다. <strong>없는 근거를 만들지 않기 위해</strong> 보류로 둡니다.</p>
-        <div class="debt-gate">꺼내 쓸 조건을 각각 적어둠</div>
+        <div class="debt-gate">다시 열 조건을 각각 적어 둠</div>
       </div>
       <div class="debt-card high">
         <div class="debt-top"><span class="sev high">해소불가</span><span class="debt-title">답이 나올 수 없는 것</span><span class="debt-num">1건</span></div>
-        <p class="debt-body">검토 분량의 권장치가 <strong>사람 검토자를 대상으로 측정된 것</strong>인데, 에이전트 검토자에게 같은 곡선이 적용된다는 근거가 없습니다.</p>
+        <p class="debt-body">검토 분량 권장치는 <strong>사람 검토자</strong>를 대상으로 측정된 값입니다. 에이전트 검토자에게 같은 곡선이 적용된다는 근거는 없습니다.</p>
         <div class="debt-gate">한정어로 안고 갑니다</div>
       </div>
     </div>
@@ -982,28 +982,28 @@
       <h2>다음 한 수</h2>
       <span class="sec-tag">M0 착수 순서</span>
     </div>
-    <p class="sec-note">넷을 만드는 순서입니다. 어디까지 직접 만들지는 각 항목을 시작할 때 그때 판단합니다.</p>
+    <p class="sec-note">M0에서 만들 네 가지의 순서입니다. 각 항목을 얼마나 직접 만들고 얼마나 참고 하네스에서 가져올지는 해당 작업을 시작할 때 판단합니다.</p>
 
     <div class="next">
       <div class="next-card">
         <div class="next-n">1</div>
         <div class="next-t">배포 스크립트</div>
-        <p class="next-d">나머지 셋이 이것 위에 섭니다. 무엇을 배포 대상으로 삼을지 목록이 이미 정해져 있습니다 — 훅 · 권한 허용 · 스킬 · 검토용 에이전트 · 선언 설정.</p>
+        <p class="next-d">나머지 세 작업이 이 배포 스크립트 위에 올라갑니다. 배포 대상은 이미 정해져 있습니다: 훅, 권한 허용 목록, 스킬, 검토용 에이전트, 선언 설정 파일입니다.</p>
       </div>
       <div class="next-card">
         <div class="next-n">2</div>
-        <div class="next-t">훅 스크립트 넷</div>
-        <p class="next-d">종료 코드 2로 차단이 실제로 되는 것, 그리고 종료 코드 0으로는 메시지가 모델에게 도달하지 않는 것이 이미 실측돼 있습니다. 알리기만 하는 훅을 만들지 않습니다.</p>
+        <div class="next-t">훅 스크립트 네 개</div>
+        <p class="next-d">종료 코드 2가 실제 차단으로 동작하고, 종료 코드 0의 메시지는 모델에게 전달되지 않는다는 점은 이미 확인했습니다. 따라서 알리기만 하는 훅은 만들지 않습니다.</p>
       </div>
       <div class="next-card">
         <div class="next-n">3</div>
         <div class="next-t">선언 설정과 어댑터</div>
-        <p class="next-d">Python 하나로 시작합니다. 나머지 언어는 검사를 만들지 않았다고 적습니다. 적지 않으면 결직접 잡힙니다.</p>
+        <p class="next-d">Python 하나로 시작합니다. 나머지 언어는 검사를 만들지 않았다고 명시합니다. 명시하지 않은 부재는 결손으로 처리합니다.</p>
       </div>
       <div class="next-card">
         <div class="next-n">4</div>
         <div class="next-t">배포하고 CP1 확인</div>
-        <p class="next-d">grid fin 저장소에 배포합니다. 배포 전 백업을 남기고, 하드 차단 두 가지가 실제로 막는지 확인합니다.</p>
+        <p class="next-d">grid fin 저장소에 배포합니다. 배포 전 백업을 남기고, 핵심 차단 조건이 실제로 동작하는지 확인합니다.</p>
       </div>
     </div>
   </section>
@@ -1011,7 +1011,7 @@
   <footer>
     <span>grid fin 구현 로드맵</span>
     <span>최초 작성 2026-08-13</span>
-    <span>최종 수정 2026-08-13</span>
+    <span>최종 수정 2026-08-18</span>
     <span>성격: 순서를 정함 · 일정이 아님</span>
     <span>미결 원본 → <a href="../draft/open-questions.md">open-questions.md</a></span>
   </footer>
