@@ -193,6 +193,23 @@ def path_has_symlink(target: Path, dest: str) -> bool:
     return False
 
 
+def escapes(target: Path, dest: str) -> bool:
+    """dest 가 대상 밖을 가리키는가.
+
+    배포 경로의 dest 는 git ls-tree 가 만들어 대상 밖을 못 가리킨다. 삭제 경로만
+    매니페스트에서 곧장 받는데, 매니페스트는 손으로 고칠 수 있고 지우는 것은
+    되돌릴 수 없다. `../victim.txt` 와 절대 경로가 실제로 저장소 밖을 지웠다(실측).
+    """
+    if not dest or dest.startswith("/"):
+        return True
+    root = target.resolve()
+    try:
+        (root / dest).resolve().relative_to(root)
+    except ValueError:
+        return True
+    return False
+
+
 def check_owned(doc, owned: list, dest: str) -> None:
     """식별자 유일성. 첫 배포에도 건다 — payload 자체가 중복을 담을 수 있다."""
     for rule in owned:
@@ -348,6 +365,9 @@ def deploy(target: Path, from_arg: str | None) -> int:
         if path_has_symlink(target, dest):
             plan.append({"dest": dest, "status": "skipped",
                          "detail": "경로에 심볼릭 링크가 있다", "entry": old})
+        elif escapes(target, dest):
+            plan.append({"dest": dest, "status": "skipped",
+                         "detail": "dest 가 대상 밖을 가리킨다", "entry": old})
         elif not live.exists():
             plan.append({"dest": dest, "status": "deleted", "entry": None})
         elif sha256(live.read_bytes()) != old.get("installedHash"):

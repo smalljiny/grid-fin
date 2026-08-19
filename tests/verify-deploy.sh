@@ -159,6 +159,9 @@ t8() {
   partial  gridfin deploy --from "$RM"
   test -f .claude/scripts/hooks/format.py
   grep -q '내가 고쳤다' .claude/scripts/hooks/format.py
+  #      항목이 남아야 다음 배포가 다시 시도한다. 스펙 §6 이 「재지 않는 것」으로
+  #      꼽았던 자리다 — 파일만 보면 항목을 지우는 구현이 통과한다
+  jq -e '[.files[].dest] | index(".claude/scripts/hooks/format.py")' .harness/manifest.json
 }
 
 t9_desc="하네스가 dirty하면 거부하고 대상에 아무것도 쓰지 않는다"
@@ -477,6 +480,64 @@ t35() {
   jq -e '[.files[].dest] | index("gridfin.json")' .harness/manifest.json
 }
 
+t36_desc="삭제 판정은 installedHash로 한다 — 병합으로 설치본이 달라진 파일도 지운다"
+t36() {
+  #      format.py 는 한 번도 병합되지 않아 installedHash 와 sourceHash 가 같다.
+  #      그래서 두 필드를 바꿔 써도 8·21·25가 전부 통과한다(변이로 실측).
+  #      먼저 병합을 일으켜 두 값을 갈라 놓고 나서 지운다
+  T=$(fresh); cd "$T"
+  echo "// 내가 고쳤다" >> .claude/scripts/hooks/format.py
+  gridfin deploy --from "$V2"                    # V2 는 format.py 를 안 건드린다 — ours 가 산다
+  jq -e '.files[] | select(.dest==".claude/scripts/hooks/format.py")
+         | .installedHash != .sourceHash' .harness/manifest.json
+  gridfin deploy --from "$RM"                    # 설치 이후로는 안 건드렸으므로 지운다
+  test ! -f .claude/scripts/hooks/format.py
+}
+
+t37_desc="이미 없는 삭제 대상은 매니페스트에서만 빼고 성공으로 끝낸다"
+t37() {
+  T=$(fresh); cd "$T"
+  rm .claude/scripts/hooks/format.py             # 사용자가 먼저 지웠다
+  gridfin deploy --from "$RM"                    # 할 일이 없다. 부분 실패가 아니다
+  jq -e '[.files[].dest] | index(".claude/scripts/hooks/format.py") == null' .harness/manifest.json
+}
+
+t38_desc="삭제 경로에 심볼릭 링크가 있으면 저장소 밖을 안 지운다"
+t38() {
+  #      29번은 쓰기만 본다. 지우기는 되돌릴 수 없어 따로 봐야 한다 —
+  #      링크 방어를 빼도 29번은 통과했다(변이로 실측)
+  T=$(fresh); cd "$T"
+  OUT=$(mktemp -d); cp .claude/scripts/hooks/*.py "$OUT/"
+  rm -rf .claude/scripts/hooks
+  ln -s "$OUT" .claude/scripts/hooks
+  partial  gridfin deploy --from "$RM"
+  test -f "$OUT/format.py"                       # 저장소 밖 파일이 살아 있다
+
+  #      대상 안을 가리키는 링크도 안 지운다. 바깥 링크는 경로를 풀어 보는 검사가
+  #      이미 막지만, 안쪽 링크는 링크 검사만 막는다(변이로 실측). 링크는 사용자 것이다
+  T=$(fresh); cd "$T"
+  cp .claude/scripts/hooks/format.py .claude/scripts/hooks/keep.py
+  rm .claude/scripts/hooks/format.py
+  ln -s keep.py .claude/scripts/hooks/format.py
+  partial  gridfin deploy --from "$RM"
+  test -L .claude/scripts/hooks/format.py
+}
+
+t39_desc="매니페스트의 dest가 대상 밖을 가리키면 지우지 않는다"
+t39() {
+  #      배포 경로의 dest 는 git ls-tree 가 만들지만 삭제 경로는 매니페스트에서
+  #      곧장 받는다. ../ 와 절대 경로가 실제로 저장소 밖을 지웠다(실측)
+  T=$(fresh); cd "$T"
+  echo 지우면 안 되는 파일 > "$T/../victim.txt"
+  H="sha256:$(shasum -a 256 "$T/../victim.txt" | cut -d' ' -f1)"
+  jq --arg h "$H" '.files += [{src:"payload/claude/x", dest:"../victim.txt", merge:"text",
+       sourceSha:.attemptedSha, sourceHash:$h, installedHash:$h}]' .harness/manifest.json > t.json
+  cat t.json > .harness/manifest.json && rm t.json
+  partial  gridfin deploy --from "$V1"
+  test -f "$T/../victim.txt"
+  rm "$T/../victim.txt"
+}
+
 # ── 실행기 ────────────────────────────────────────────────
 # 시험마다 함수로 나눈 이유가 있다. set -e 가 걸린 한 덩어리로 두면 첫 실패에서
 # 멈춰 어느 시험이 통과했는지 알 수 없다. 단계적 구현에서는 대부분의 시험이
@@ -485,7 +546,7 @@ t35() {
 #   bash tests/verify-deploy.sh          전부
 #   bash tests/verify-deploy.sh 1 2 19   고른 것만
 
-ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35"
+ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39"
 
 restore_fixtures() {
   # 앞 시험이 fixture 를 더럽힌 채 실패해도 다음 시험이 영향받지 않게 되돌린다.
