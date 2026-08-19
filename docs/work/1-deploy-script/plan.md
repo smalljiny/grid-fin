@@ -26,10 +26,13 @@ issue: 1
 **무엇**: `payload/`에 자리표시본을 넣고 `tests/make-fixtures.sh`를 만든다.
 
 - `payload/claude/settings.json` — `hooks`(SessionStart·PreToolUse) · `permissions.allow` · `statusLine`
-- `payload/claude/scripts/hooks/{session-start,pre-commit,format}.js` — 각 2줄, 첫 줄에 「#2가 채운다」
+- `payload/claude/scripts/hooks/{session-start,pre-commit,format}.js` — **각 3줄, 파일마다 자기 이름을 담는다**
 - `tests/make-fixtures.sh` — 하네스 저장소 8개(V1·V2·V3·RM·CONF·CONFJ·V_SPACE·V_ROOT)를 만들고 경로를 내보낸다
+- `docs/tmp/impl-later/verify-deploy.sh` → **`tests/verify-deploy.sh`로 옮긴다**
 
-**완료 조건**: `eval "$(bash tests/make-fixtures.sh)"` 후 8개 경로가 전부 존재하고 각각 git 저장소이며 커밋이 있다.
+**`payload/root/`는 만들지 않는다.** #3이 선언 설정 파일을 넣을 때 생긴다.
+
+**완료 조건**: `eval "$(bash tests/make-fixtures.sh)"` 후 8개 경로가 전부 존재하고 각각 git 저장소이며 커밋이 있다. 훅 스크립트 3개의 내용이 서로 다르다.
 
 **커밋**: `배포 검증에 쓸 fixture와 하네스 저장소 8개를 만든다`
 
@@ -41,7 +44,7 @@ issue: 1
 
 - `payload/claude/` → `.claude/`, `payload/root/` → 루트 매핑
 - 매니페스트 필드 7개 기록
-- `--from` 인자
+- `--from` 인자. **생략하면 매니페스트의 `source.path` → `source.remote` 순으로 찾고, 첫 배포에서 생략하면 `no_source`로 거부한다**
 
 **완료 조건**: **C1 · C2 · C3 · C21**
 
@@ -118,19 +121,19 @@ T1 fixture ──▶ T2 배포·매니페스트 ──▶ T3 병합 ──▶ T4
 
 ## 4. 각 task가 끝났다고 판정하는 법
 
-**`docs/tmp/impl-later/verify-deploy.sh`의 해당 시험만 돌린다.** 그 파일을 T1에서 `tests/verify-deploy.sh`로 옮긴다.
+**`tests/verify-deploy.sh`의 해당 시험만 돌린다.** T1이 그 파일을 제자리에 놓는다.
 
 **앞 task의 조건이 깨지지 않았는지도 본다** — 회귀를 커밋 단위에서 잡는다. T6에서만 전체를 돌리면 어느 커밋이 깼는지 못 찾는다.
 
-## 5. 쪼개다 나온 것 — 스펙으로 돌려보낼 것
+## 5. 쪼개다 나온 것 — 정해졌다
 
-**여기서 정하지 않는다.** 스펙에 반영할지 사용자가 정한다.
+계획을 쓰면서 스펙이 답을 안 주는 곳 넷이 나왔고 **넷 다 T1~T2를 막고 있었다.** 2026-08-19에 정했고 스펙에 반영했다.
 
-| 무엇 | 왜 걸리나 |
-|---|---|
-| **`tests/verify-deploy.sh`를 언제 옮기나** | 계획은 T1에서 옮긴다고 적었지만 **스펙은 그 파일의 자리를 정하지 않았다.** 산출물 4종에 「검증용 하네스 저장소를 만드는 스크립트」는 있는데 검증 스크립트 자신은 없다 |
-| **`--from`을 생략하면 어떻게 되나** | 스펙은 조회 순서를 `--from` → `source.path` → `source.remote`로 정했다. **첫 배포에는 매니페스트가 없으므로 `--from`이 필수인지, 아니면 다른 기본값이 있는지 안 정해졌다** |
-| **`payload/root/`가 비어 있을 때** | #3 전까지는 그 디렉터리가 없다. **없는 것이 정상인지, 빈 디렉터리를 두는지** 안 정해졌다 |
-| **자리표시본의 내용을 무엇으로 하나** | 스펙이 `process.exit(0)` 한 줄이라고만 적었다. **`session-start.js`와 `format.js`도 같은 내용인지, 파일마다 다른지** 안 정해졌다 |
+| 무엇 | 결정 | 왜 그쪽인가 · 대가 |
+|---|---|---|
+| 검증 스크립트의 자리 | **`tests/`** — `make-fixtures.sh`와 `verify-deploy.sh` 둘 다 | 배포물이 아니고 구현이 사는 동안 계속 돌아야 한다. **소멸 문서와 함께 지우면 고칠 때마다 다시 만들어야 한다.** 산출물이 4종에서 5종이 됐다 |
+| `--from` 생략 | **매니페스트의 `source.path` → `source.remote` 순으로 찾는다.** 첫 배포에서 생략하면 `no_source`로 거부 | **이미 정한 조회 순서와 그대로 이어진다** — `--from`이 없으면 2번부터 시작할 뿐이다. 대가: 첫 배포와 재배포의 인자가 달라 보인다 |
+| `payload/root/`가 빌 때 | **만들지 않는다.** 매핑이 존재하는 하위 디렉터리를 순회한다 | git이 빈 디렉터리를 추적하지 않아 **자리를 잡아 두려면 배포하면 안 되는 파일을 넣게 되고 제외 규칙이 하나 는다.** 대가: #3 전까지 그 자리가 안 보인다 |
+| 자리표시본 내용 | **파일마다 자기 이름을 담는 3줄** | 내용이 같으면 `sourceHash`가 셋 다 같아져 **파일을 뒤바꿔 쓰는 구현이 해시 비교를 통과한다.** 3줄인 것은 검증이 2번째 줄에 사용자 줄을 넣기 때문이다 |
 
-**넷 다 T1~T2를 막는다.** 스펙에 반영한 뒤 시작하는 편이 낫다.
+**막힌 것이 남아 있지 않다.** T1부터 시작할 수 있다.
