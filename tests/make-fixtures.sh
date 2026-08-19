@@ -12,7 +12,9 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-BASE=$(mktemp -d)
+# 검증 스크립트가 GRIDFIN_RUN 을 넘겨주면 그 안에 만든다. 이 머신의 mktemp 는
+# TMPDIR 을 따르지 않아, 그러지 않으면 fixture 8개가 실행마다 남는다(실측).
+BASE=$(mktemp -d "${GRIDFIN_RUN:-${TMPDIR:-/tmp}}/fx.XXXXXXXX")
 HARNESS="$BASE/harness"
 
 say() { printf '%s\n' "$*" >&2; }

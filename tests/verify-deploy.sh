@@ -18,11 +18,17 @@ PATH="$(cd "$(dirname "$0")/../bin" && pwd):$PATH"; export PATH
 GRIDFIN_RUN=$(mktemp -d)
 trap 'rm -rf "$GRIDFIN_RUN"' EXIT
 export TMPDIR="$GRIDFIN_RUN"
+# TMPDIR 만으로는 부족하다. 이 머신의 mktemp -d 는 TMPDIR 을 따르지 않고 시스템
+# 임시 디렉터리에 만든다(실측). 그러면 ⓐ 정리가 아무것도 안 지우고 ⓑ 시험이
+# 만드는 상대 경로가 실행 사이에 겹친다. 28번의 ../wt 가 실제로 겹쳐서, 옛 실행이
+# 남긴 워크트리를 재사용하며 워크트리 배포를 깨는 변이가 통과했다(실측).
+# 아래를 쓰면 전부 GRIDFIN_RUN 안에 생기고 끝날 때 통째로 사라진다.
+mk() { mktemp -d "$GRIDFIN_RUN/t.XXXXXXXX"; }
 
 # ── 준비물 ──────────────────────────────────────────────
 # 하네스 저장소 8개를 만드는 스크립트를 #1이 함께 만든다. 검증 블록은 그것을 부른다.
 # 이 블록이 그대로 실행되어야 「검증 명령이 실행 가능하다」는 이 저장소의 요건을 만족한다.
-eval "$(bash tests/make-fixtures.sh)"   # V1 V2 V3 RM CONF CONFJ V_SPACE V_ROOT 를 내보낸다
+GRIDFIN_RUN="$GRIDFIN_RUN" eval "$(GRIDFIN_RUN="$GRIDFIN_RUN" bash tests/make-fixtures.sh)"   # V1 V2 V3 RM CONF CONFJ V_SPACE V_ROOT 를 내보낸다
 
 # V1     : 「fixture payload」 절의 자리표시본 그대로
 # V2     : V1에서 allow에 "Bash(rg:*)" 추가·"Bash(gh:*)" 삭제 / PreToolUse에 matcher "Edit" 추가
@@ -39,10 +45,10 @@ entry() { jq -c --arg d "$2" '.files[] | select(.dest==$d) | {sourceSha,sourceHa
 
 # 시험마다 v1이 배포된 새 대상을 만든다
 # fresh는 실패를 반드시 전파한다. 아래 형태가 아니면 배포 실패가 조용히 통과한다 —
-#   d=$(mktemp -d); (cd "$d" && ...) >/dev/null; echo "$d"
+#   d=$(mk); (cd "$d" && ...) >/dev/null; echo "$d"
 #   command substitution 안에서는 set -e가 기대처럼 전파되지 않는다(실측)
 fresh() {
-  d=$(mktemp -d)
+  d=$(mk)
   if ! (cd "$d" && git init -q && gridfin deploy --from "$V1" >/dev/null); then rm -rf "$d"; return 1; fi
   echo "$d"
 }
@@ -132,7 +138,7 @@ t7_desc="base를 못 꺼내면 덮지 않고 건너뛴다"
 t7() {
   #      로컬 경로 clone은 --depth를 무시하므로 file:// 전송을 강제한다
   T=$(fresh); cd "$T"
-  SH=$(mktemp -d); git clone -q --depth 1 "file://$V2" "$SH/h"
+  SH=$(mk); git clone -q --depth 1 "file://$V2" "$SH/h"
   #      매니페스트의 source.path 를 없는 경로로 바꿔 되돌아갈 곳을 끊는다.
   #      끊지 않으면 본문의 조회 순서대로 원본 저장소에서 base를 찾아 시험이 헛돈다
   jq '.source.path = "/nonexistent"' .harness/manifest.json > t.json && mv t.json .harness/manifest.json
@@ -178,7 +184,7 @@ t9() {
 
 t10_desc="대상이 git 저장소가 아니면 거부하고 아무것도 쓰지 않는다"
 t10() {
-  T=$(mktemp -d); cd "$T"
+  T=$(mk); cd "$T"
   rejected gridfin deploy --from "$V1"
   test -z "$(ls -A)"
 }
@@ -253,7 +259,7 @@ t16() {
 
 t17_desc="exclude 블록에는 주입한 것만 들어간다"
 t17() {
-  T=$(mktemp -d); cd "$T" && git init -q
+  T=$(mk); cd "$T" && git init -q
   mkdir -p .claude && echo x > .claude/tracked.txt && git add -A && git commit -qm init
   gridfin deploy --from "$V1"
   grep -q '^\.harness/$' .git/info/exclude
@@ -395,7 +401,10 @@ t27() {
 t28_desc="워크트리에 배포된다 — .git이 파일인 곳에서도 성립한다"
 t28() {
   T=$(fresh); cd "$T"
-  git worktree add -q ../wt -b wt && cd ../wt
+  #      상대 경로 ../wt 를 쓰면 안 된다. 실행마다 같은 자리를 가리켜 옛 워크트리가
+  #      재사용되고, 워크트리 배포를 깨는 변이가 통과했다(실측). 매번 새 자리를 만든다
+  WT=$(mk)/wt
+  git worktree add -q "$WT" -b wt && cd "$WT"
   gridfin deploy --from "$V1"
   test -f .claude/settings.json
   test -f .harness/manifest.json
@@ -408,7 +417,7 @@ t28() {
 t29_desc="dest가 심볼릭 링크면 건너뛰고 링크 바깥을 안 고친다"
 t29() {
   T=$(fresh); cd "$T"
-  OUT=$(mktemp -d); cp .claude/scripts/hooks/pre-commit.py "$OUT/real.py"
+  OUT=$(mk); cp .claude/scripts/hooks/pre-commit.py "$OUT/real.py"
   BEFORE=$(shasum -a 256 "$OUT/real.py" | cut -d' ' -f1)
   ln -sf "$OUT/real.py" .claude/scripts/hooks/pre-commit.py
   partial  gridfin deploy --from "$V2"          # 심볼릭 링크는 파일별 건너뛰기다
@@ -438,12 +447,41 @@ t31() {
   R2=0; wait "$P2" || R2=$?
   test $(( (R1==0) + (R2==0) )) -eq 1                            # 하나만 성공한다
   test $(( (R1==2) + (R2==2) )) -eq 1                            # 나머지는 잠금 실패로 거부된다
+
+  #      겹쳐 돌리는 것만으로는 부족하다. 잠금을 잡자마자 푸는 변이가 단독 실행에서
+  #      다섯 번 다 통과했고, 전체 실행에서는 실패했다 — 겹쳐 돌리기의 판정이
+  #      시간에 좌우된다(실측). 아래 셋은 시간에 기대지 않는다
+  test ! -e .harness/deploy.lock                                 # 성공한 배포가 남기지 않는다
+
+  #      ① 잠금이 배포 내내 잡혀 있는가. 배포를 띄워 놓고 끝날 때까지 본다 —
+  #      잡자마자 푸는 구현은 창이 마이크로초라 한 번도 안 보인다
+  T=$(fresh); cd "$T"
+  gridfin deploy --from "$V2" >/dev/null & P=$!
+  SEEN=0
+  while kill -0 "$P" 2>/dev/null; do
+    if [ -e .harness/deploy.lock ]; then SEEN=1; break; fi
+  done
+  wait "$P"
+  test "$SEEN" -eq 1
+  T=$(fresh); cd "$T"
+  mkdir .harness/deploy.lock                                     # 다른 배포가 쥐고 있다
+  rejected gridfin deploy --from "$V2"
+  rmdir .harness/deploy.lock
+  gridfin deploy --from "$V2"                                    # 풀리면 다시 된다
+
+  #      전체 거부로 나가는 길에도 풀어야 한다. 안 그러면 한 번 거부된 대상이 영영 막힌다.
+  #      잠금을 쥔 뒤에 나는 거부여야 한다 — dirty 와 비 git 은 잠금 전에 걸러진다
+  T=$(fresh); cd "$T"
+  jq '(.files[] | select(.dest==".claude/scripts/hooks/pre-commit.py") | .sourceHash) = "sha256:0000"' \
+     .harness/manifest.json > t.json && cat t.json > .harness/manifest.json && rm t.json
+  rejected gridfin deploy --from "$V2"
+  test ! -e .harness/deploy.lock
 }
 
 t32_desc="공백과 유니코드가 든 파일 이름을 견딘다"
 t32() {
   #       V1에 payload/claude/scripts/hooks/이름 있는 훅.py 를 넣은 하네스로 배포한다
-  T=$(mktemp -d); cd "$T" && git init -q
+  T=$(mk); cd "$T" && git init -q
   gridfin deploy --from "$V_SPACE"
   test -f ".claude/scripts/hooks/이름 있는 훅.py"
   jq -e '[.files[].dest] | index(".claude/scripts/hooks/이름 있는 훅.py")' .harness/manifest.json
@@ -474,7 +512,7 @@ t34() {
 t35_desc="payload/root/ 에 파일을 넣으면 스크립트를 안 고쳐도 배포된다"
 t35() {
   #       payload/claude 만 하드코딩한 구현이 여기서 걸린다. #3이 이 경로에 의존한다
-  T=$(mktemp -d); cd "$T" && git init -q
+  T=$(mk); cd "$T" && git init -q
   gridfin deploy --from "$V_ROOT"                # V_ROOT = V1 + payload/root/gridfin.json
   test -f gridfin.json
   jq -e '[.files[].dest] | index("gridfin.json")' .harness/manifest.json
@@ -507,7 +545,7 @@ t38() {
   #      29번은 쓰기만 본다. 지우기는 되돌릴 수 없어 따로 봐야 한다 —
   #      링크 방어를 빼도 29번은 통과했다(변이로 실측)
   T=$(fresh); cd "$T"
-  OUT=$(mktemp -d); cp .claude/scripts/hooks/*.py "$OUT/"
+  OUT=$(mk); cp .claude/scripts/hooks/*.py "$OUT/"
   rm -rf .claude/scripts/hooks
   ln -s "$OUT" .claude/scripts/hooks
   partial  gridfin deploy --from "$RM"
@@ -562,6 +600,31 @@ t40() {
   test "$(date -r .harness/manifest.json +%Y)" = "2000"
 }
 
+t41_desc="무시 목록은 관리 블록만 고치고 두 번 붙지 않는다"
+t41() {
+  #      grep -q 로만 보면 블록을 매번 덧붙이는 구현이 통과한다(변이로 실측).
+  #      이 파일은 사용자도 고치므로 블록 밖이 그대로여야 한다
+  T=$(mk); cd "$T" && git init -q
+  printf '내가 쓴 위\n' > .git/info/exclude
+  gridfin deploy --from "$V1"
+  printf '내가 쓴 아래\n' >> .git/info/exclude
+  gridfin deploy --from "$V1"
+  test "$(grep -c '^# gridfin: begin' .git/info/exclude)" -eq 1
+  grep -q '^내가 쓴 위$'   .git/info/exclude
+  grep -q '^내가 쓴 아래$' .git/info/exclude
+}
+
+t42_desc="무시 목록을 못 쓰면 전체 거부하고 배포물이 안 생긴다"
+t42() {
+  #      스펙 §3.8이 전체 거부로 정했는데 시험이 없다고 §6이 꼽아 둔 자리다.
+  #      삼키는 구현은 배포를 끝내 버리고 git status 가 배포물로 더러워진다
+  T=$(mk); cd "$T" && git init -q
+  chmod 444 .git/info/exclude
+  rejected gridfin deploy --from "$V1"
+  test ! -e .claude
+  chmod 644 .git/info/exclude
+}
+
 # ── 실행기 ────────────────────────────────────────────────
 # 시험마다 함수로 나눈 이유가 있다. set -e 가 걸린 한 덩어리로 두면 첫 실패에서
 # 멈춰 어느 시험이 통과했는지 알 수 없다. 단계적 구현에서는 대부분의 시험이
@@ -570,7 +633,7 @@ t40() {
 #   bash tests/verify-deploy.sh          전부
 #   bash tests/verify-deploy.sh 1 2 19   고른 것만
 
-ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40"
+ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42"
 
 restore_fixtures() {
   # 앞 시험이 fixture 를 더럽힌 채 실패해도 다음 시험이 영향받지 않게 되돌린다.
