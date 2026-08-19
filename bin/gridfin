@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -58,8 +59,11 @@ def exclude_entries(target: Path, dests) -> list[str]:
         # payload/root/ 는 저장소 루트에 파일을 놓는다. 감쌀 디렉터리가 없으므로
         # 그 파일 이름을 그대로 넣는다 — 디렉터리 항목으로 뭉뚱그리면 저장소 전체를 덮는다.
         out.add(d.split("/")[0] + "/" if "/" in d else d)
-    return [e for e in sorted(out)
+    keep = [e for e in sorted(out)
             if not git(target, "ls-files", "--", e.rstrip("/")).strip()]
+    # 앞에 / 를 붙여 저장소 루트에 고정한다. gitignore 에서 앵커 없는 이름은
+    # 모든 깊이의 같은 이름에 걸려, sub/gridfin.json 까지 숨었다(교차 검토 실측).
+    return ["/" + e for e in keep]
 
 
 def write_exclude(target: Path, entries: list[str]) -> None:
@@ -320,11 +324,18 @@ def deploy(target: Path, from_arg: str | None) -> int:
         return die("harness_dirty — 하네스의 payload/ 에 커밋되지 않은 변경이 있다")
 
     lock = target / ".harness" / "deploy.lock"
-    lock.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        lock.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        # 스펙 §3.8 이 전체 거부로 정한 자리다. 안 잡으면 traceback 과 함께 1 로
+        # 나가고, 부르는 쪽은 그것을 부분 실패로 읽는다(교차 검토 실측).
+        return die(f"no_permission — 대상 루트에 쓸 수 없다: {e}")
     try:
         lock.mkdir()        # exist_ok 를 주면 안 된다. 이 한 번이 원자적 획득이다
     except FileExistsError:
         return die("lock_busy — 다른 배포가 이 대상을 잡고 있다")
+    except OSError as e:
+        return die(f"no_permission — 잠금을 만들 수 없다: {e}")
     try:
         return run_deploy(target, harness)
     finally:
@@ -528,6 +539,13 @@ class Rejected(Exception):
 
 
 def main(argv: list[str]) -> int:
+    # 기본 동작은 finally 를 안 돌리고 죽는다. 그러면 잠금이 남아 다음 배포가
+    # 영영 막힌다(교차 검토 실측 — TERM·INT 둘 다). SIGKILL 은 못 막는다.
+    def _bye(signum, frame):
+        raise SystemExit(REJECTED)
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        signal.signal(sig, _bye)
+
     if not argv or argv[0] != "deploy":
         print("사용법: gridfin deploy [--from <하네스 저장소>]", file=sys.stderr)
         return REJECTED

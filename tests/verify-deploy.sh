@@ -262,8 +262,8 @@ t17() {
   T=$(mk); cd "$T" && git init -q
   mkdir -p .claude && echo x > .claude/tracked.txt && git add -A && git commit -qm init
   gridfin deploy --from "$V1"
-  grep -q '^\.harness/$' .git/info/exclude
-  ! grep -q '^\.claude/$' .git/info/exclude          # 이미 추적 중이므로 넣지 않는다
+  grep -q '^/\.harness/$' .git/info/exclude          # / 로 시작해야 저장소 루트에 고정된다
+  ! grep -q '\.claude/$' .git/info/exclude            # 이미 추적 중이므로 넣지 않는다
 }
 
 t18_desc="pointer 부재와 JSON null을 구별한다"
@@ -411,7 +411,7 @@ t28() {
   #      무시 목록이 실제로 걸렸는지 본다. 워크트리 전용 exclude는 git이 읽지 않으므로
   #      경로를 잘못 풀면 여기서 걸린다
   test -z "$(git status --porcelain -- .claude .harness)"
-  grep -q '^\.harness/$' "$(git rev-parse --git-common-dir)/info/exclude"
+  grep -q '^/\.harness/$' "$(git rev-parse --git-common-dir)/info/exclude"
 }
 
 t29_desc="dest가 심볼릭 링크면 건너뛰고 링크 바깥을 안 고친다"
@@ -628,6 +628,48 @@ t42() {
   chmod 644 .git/info/exclude
 }
 
+t43_desc="대상 루트에 쓸 권한이 없으면 전체 거부한다"
+t43() {
+  #      스펙 §3.8이 전체 거부로 정한 자리다. 안 잡으면 traceback 과 함께 1 로
+  #      나가고 부르는 쪽이 그것을 부분 실패로 읽는다(교차 검토 실측)
+  T=$(mk); cd "$T" && git init -q
+  chmod 555 "$T"
+  rejected gridfin deploy --from "$V1"
+  chmod 755 "$T"
+  test ! -e .claude
+  test ! -e .harness
+}
+
+t44_desc="신호로 죽어도 잠금을 남기지 않는다"
+t44() {
+  #      기본 동작은 finally 를 안 돌리고 죽는다. 그러면 잠금이 남아 다음 배포가
+  #      영영 막힌다(교차 검토 실측 — TERM·INT 둘 다)
+  T=$(fresh); cd "$T"
+  gridfin deploy --from "$V2" >/dev/null & P=$!
+  SEEN=0
+  while kill -0 "$P" 2>/dev/null; do
+    if [ -e .harness/deploy.lock ]; then SEEN=1; break; fi
+  done
+  test "$SEEN" -eq 1
+  kill -TERM "$P" 2>/dev/null || true
+  wait "$P" || true
+  test ! -e .harness/deploy.lock
+  gridfin deploy --from "$V2"                                    # 다음 배포가 막히지 않는다
+}
+
+t45_desc="무시 목록 항목이 저장소 루트에 고정된다 — 하위의 같은 이름을 안 숨긴다"
+t45() {
+  #      gitignore 에서 앵커 없는 이름은 모든 깊이의 같은 이름에 걸린다.
+  #      sub/gridfin.json 이 실제로 숨었다(교차 검토 실측)
+  T=$(mk); cd "$T" && git init -q
+  gridfin deploy --from "$V_ROOT"                                # 루트에 gridfin.json 을 놓는다
+  mkdir -p sub && echo 내것 > sub/gridfin.json
+  mkdir -p sub/.claude && echo 내것 > sub/.claude/x.json
+  test -n "$(git status --porcelain -- sub/gridfin.json)"        # 사용자 파일이 보여야 한다
+  test -n "$(git status --porcelain -- sub/.claude/x.json)"
+  test -z "$(git status --porcelain -- gridfin.json)"            # 배포한 것은 숨는다
+}
+
 # ── 실행기 ────────────────────────────────────────────────
 # 시험마다 함수로 나눈 이유가 있다. set -e 가 걸린 한 덩어리로 두면 첫 실패에서
 # 멈춰 어느 시험이 통과했는지 알 수 없다. 단계적 구현에서는 대부분의 시험이
@@ -636,7 +678,7 @@ t42() {
 #   bash tests/verify-deploy.sh          전부
 #   bash tests/verify-deploy.sh 1 2 19   고른 것만
 
-ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42"
+ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45"
 
 restore_fixtures() {
   # 앞 시험이 fixture 를 더럽힌 채 실패해도 다음 시험이 영향받지 않게 되돌린다.
