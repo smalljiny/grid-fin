@@ -88,7 +88,7 @@ jq -e '[.hooks.PreToolUse[].matcher] | index("Edit")' .claude/settings.json
 #      사용자는 파일 중간에, V2는 파일 끝에 줄을 더한다
 T=$(fresh); cd "$T"
 awk 'NR==2{print "// 사용자가 중간에 넣은 줄"}1' .claude/scripts/hooks/pre-commit.js > t.js
-mv t.js .claude/scripts/hooks/pre-commit.js
+cat t.js > .claude/scripts/hooks/pre-commit.js && rm t.js   # mv 는 모드를 떨어뜨린다
 gridfin deploy --from "$V2"
 git -C "$V2" show HEAD:payload/claude/scripts/hooks/pre-commit.js |
   awk 'NR==2{print "// 사용자가 중간에 넣은 줄"}1' > expected.js
@@ -98,12 +98,16 @@ diff expected.js .claude/scripts/hooks/pre-commit.js
 # ── 6. 충돌하면 살아 있는 파일이 바이트까지 그대로다
 T=$(fresh); cd "$T"
 #      사용자와 CONF가 같은 첫 줄을 각각 다르게 고친 상태를 만든다
+#      mv 로 갈아치우면 모드가 떨어진다. 되쓰기로 실행 비트를 유지한다
 awk 'NR==1{print "// 사용자가 고친 첫 줄"; next}1' .claude/scripts/hooks/pre-commit.js > t.js
-mv t.js .claude/scripts/hooks/pre-commit.js
+cat t.js > .claude/scripts/hooks/pre-commit.js && rm t.js
 BEFORE=$(tree_hash .claude)
 partial  gridfin deploy --from "$CONF"
 test "$(tree_hash .claude)" = "$BEFORE"        # .merged를 뺀 트리는 그대로다
 test -f .claude/scripts/hooks/pre-commit.js.merged   # 병합 결과는 옆에 나온다
+#      tree_hash 는 내용만 본다. 충돌한 파일의 실행 비트를 떨어뜨리는 구현이
+#      내용만 유지하면 통과해 버리므로 모드를 따로 본다. 30번은 성공 경로만 본다
+test -x .claude/scripts/hooks/pre-commit.js
 
 # ── 7. base를 못 꺼내면 덮지 않고 건너뛴다
 #      로컬 경로 clone은 --depth를 무시하므로 file:// 전송을 강제한다
@@ -240,7 +244,7 @@ jq -e '.files[] | select(.merge=="json") | .owned
 #       둘을 같게 기록하는 구현이 여기서 걸린다
 T=$(fresh); cd "$T"
 awk 'NR==2{print "// 사용자 줄"}1' .claude/scripts/hooks/pre-commit.js > t.js
-mv t.js .claude/scripts/hooks/pre-commit.js
+cat t.js > .claude/scripts/hooks/pre-commit.js && rm t.js   # mv 는 모드를 떨어뜨린다
 gridfin deploy --from "$V2"
 jq -e '.files[] | select(.dest==".claude/scripts/hooks/pre-commit.js")
        | .installedHash != .sourceHash' .harness/manifest.json
@@ -261,7 +265,7 @@ test "$(tree_hash .claude)$(shasum -a 256 .harness/manifest.json | cut -d' ' -f1
 # ── 23. 연쇄 갱신 — V1 → V2 → V3에서 base가 매번 올바른 리비전에서 나온다
 T=$(fresh); cd "$T"
 awk 'NR==2{print "// 사용자 줄"}1' .claude/scripts/hooks/pre-commit.js > t.js
-mv t.js .claude/scripts/hooks/pre-commit.js
+cat t.js > .claude/scripts/hooks/pre-commit.js && rm t.js   # mv 는 모드를 떨어뜨린다
 gridfin deploy --from "$V2"
 gridfin deploy --from "$V3"
 grep -q '사용자 줄' .claude/scripts/hooks/pre-commit.js       # 두 번을 지나도 살아남는다
@@ -273,7 +277,7 @@ diff want.js .claude/scripts/hooks/pre-commit.js
 #       V1과 V2가 같은 저장소의 두 리비전인 경우다
 T=$(fresh); cd "$T"
 awk 'NR==2{print "// 사용자 줄"}1' .claude/scripts/hooks/pre-commit.js > t.js
-mv t.js .claude/scripts/hooks/pre-commit.js
+cat t.js > .claude/scripts/hooks/pre-commit.js && rm t.js   # mv 는 모드를 떨어뜨린다
 gridfin deploy --from "$V2"
 gridfin deploy --from "$V1"                                    # 리비전이 뒤로 간다
 grep -q '사용자 줄' .claude/scripts/hooks/pre-commit.js
@@ -291,8 +295,9 @@ jq -e '[.files[].dest] | index(".claude/scripts/hooks/format.js")' .harness/mani
 
 # ── 26. 충돌 보고물은 다음 성공 배포가 치운다
 T=$(fresh); cd "$T"
+#      mv 로 갈아치우면 모드가 떨어진다. 되쓰기로 실행 비트를 유지한다
 awk 'NR==1{print "// 사용자가 고친 첫 줄"; next}1' .claude/scripts/hooks/pre-commit.js > t.js
-mv t.js .claude/scripts/hooks/pre-commit.js
+cat t.js > .claude/scripts/hooks/pre-commit.js && rm t.js
 partial  gridfin deploy --from "$CONF"
 test -f .claude/scripts/hooks/pre-commit.js.merged
 git -C "$CONF" show HEAD:payload/claude/scripts/hooks/pre-commit.js > .claude/scripts/hooks/pre-commit.js
@@ -366,8 +371,9 @@ jq -e '[.files[].dest] | index(".claude/scripts/hooks/이름 있는 훅.js")' .h
 
 # ── 33. --json이 무엇이 되고 무엇이 안 됐는지 답한다
 T=$(fresh); cd "$T"
+#      mv 로 갈아치우면 모드가 떨어진다. 되쓰기로 실행 비트를 유지한다
 awk 'NR==1{print "// 사용자가 고친 첫 줄"; next}1' .claude/scripts/hooks/pre-commit.js > t.js
-mv t.js .claude/scripts/hooks/pre-commit.js
+cat t.js > .claude/scripts/hooks/pre-commit.js && rm t.js
 partial gridfin deploy --from "$CONF" --json > out.json
 jq -e '.outcome == "partial"' out.json
 jq -e '.files[] | select(.dest==".claude/scripts/hooks/pre-commit.js") | .status == "conflict"' out.json

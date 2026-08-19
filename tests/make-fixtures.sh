@@ -59,9 +59,11 @@ save "$RM" "rm"
 
 # CONF — v1에서 pre-commit.js 의 첫 줄을 고친다 (텍스트 충돌용)
 CONF=$(branch conf main)
-awk 'NR==1{print "// 하네스가 고친 첫 줄"; next}1' \
-  "$CONF/payload/claude/scripts/hooks/pre-commit.js" > "$CONF/t.js"
-mv "$CONF/t.js" "$CONF/payload/claude/scripts/hooks/pre-commit.js"
+# awk 결과를 mv 로 갈아치우면 새 파일이라 모드가 기본값으로 떨어진다.
+# sed -i 는 제자리 수정이라 모드를 유지했는데 그 성질을 잃었다. 되쓰기로 유지한다.
+_f="$CONF/payload/claude/scripts/hooks/pre-commit.js"
+awk 'NR==1{print "// 하네스가 고친 첫 줄"; next}1' "$_f" > "$CONF/t.js"
+cat "$CONF/t.js" > "$_f" && rm "$CONF/t.js"
 save "$CONF" "conf"
 
 # CONFJ — v1에서 statusLine.command 를 바꾼다 (값 자리 충돌용)
