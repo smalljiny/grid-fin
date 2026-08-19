@@ -172,6 +172,10 @@ def deploy(target: Path, from_arg: str | None) -> int:
     return PARTIAL if skipped else OK
 
 
+class Rejected(Exception):
+    """전체 거부로 끝낼 사유. 종료 코드 2로 나간다."""
+
+
 def main(argv: list[str]) -> int:
     if not argv or argv[0] != "deploy":
         print("사용법: gridfin deploy [--from <하네스 저장소>]", file=sys.stderr)
@@ -185,7 +189,15 @@ def main(argv: list[str]) -> int:
             rest = rest[1:]                 # T6 이 만든다. 지금은 받기만 한다
         else:
             return die(f"모르는 인자: {rest[0]}")
-    return deploy(Path.cwd(), from_arg)
+    try:
+        return deploy(Path.cwd(), from_arg)
+    except Rejected as e:
+        return die(str(e))
+    except subprocess.CalledProcessError as e:
+        # git 이 실패하면 하네스 입력이 잘못된 것이다. 1은 부분 실패라는 뜻이라
+        # 여기로 새면 부르는 쪽이 두 상황을 구별하지 못한다.
+        err = (e.stderr or b"").decode(errors="replace").strip()
+        return die(f"git 이 실패했다 — {' '.join(e.cmd[:4])}\n{err}")
 
 
 if __name__ == "__main__":

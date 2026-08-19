@@ -1,12 +1,29 @@
 {
-  "_읽는 법": "payload 안의 경로를 키로 삼아 배포 규칙을 적는다. 적지 않은 파일은 merge=text 로 다룬다. 이 파일은 payload 최상위에 있어 배포되지 않는다 — 매핑이 하위 디렉터리만 순회한다.",
   "claude/settings.json": {
     "merge": "json",
     "owned": [
-      { "pointer": "/permissions/allow", "key": null },
-      { "pointer": "/hooks/PreToolUse", "key": ["/matcher", "/hooks/0/command"] },
-      { "pointer": "/hooks/SessionStart", "key": ["/matcher", "/hooks/0/command"] },
-      { "pointer": "/statusLine", "key": null }
+      {
+        "pointer": "/permissions/allow",
+        "key": null
+      },
+      {
+        "pointer": "/hooks/PreToolUse",
+        "key": [
+          "/matcher",
+          "/hooks/0/command"
+        ]
+      },
+      {
+        "pointer": "/hooks/SessionStart",
+        "key": [
+          "/matcher",
+          "/hooks/0/command"
+        ]
+      },
+      {
+        "pointer": "/statusLine",
+        "key": null
+      }
     ]
   }
 }

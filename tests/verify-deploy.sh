@@ -57,11 +57,12 @@ partial()  { if "$@"; then return 1; else test $? -eq 1; fi; }
 T=$(fresh); cd "$T"
 jq -e . .harness/manifest.json > /dev/null
 jq -e . .claude/settings.json > /dev/null
-jq -j '.files[].dest, "\u0000"' .harness/manifest.json | while IFS= read -r -d '' d; do test -f "$d"; done
+jq -rj '.files[].dest, "\u0000"' .harness/manifest.json | while IFS= read -r -d '' d; do test -f "$d"; done
 jq -e '[.files[].dest] | index(".harness/manifest.json") == null' .harness/manifest.json
 
 # ── 2. 파일마다 sourceSha로 base를 꺼낼 수 있고 sourceHash가 그것과 맞는다
 #      전 항목을 돈다. 하나만 맞는 구현이 통과하지 못한다
+T=$(fresh); cd "$T"
 jq -r '.files[] | [.sourceSha, .src, .sourceHash] | @tsv' .harness/manifest.json |
 while IFS=$'\t' read -r sha src want; do
   git -C "$V1" cat-file -e "$sha^{commit}"
@@ -72,7 +73,7 @@ done
 # ── 3. JSON 배열은 원소 단위로 병합된다 — 추가·삭제·보존을 함께 본다
 T=$(fresh); cd "$T"
 jq '.env.MINE = "keep" | .permissions.allow += ["Bash(mytool:*)"]' \
-   .claude/settings.json > t.pyon && mv t.json .claude/settings.json
+   .claude/settings.json > t.json && mv t.json .claude/settings.json
 gridfin deploy --from "$V2"
 jq -e '.env.MINE == "keep"' .claude/settings.json                               # owned 밖은 그대로
 jq -e '.permissions.allow | index("Bash(mytool:*)")' .claude/settings.json       # 사용자 원소가 남는다
@@ -82,7 +83,7 @@ jq -e '.permissions.allow | index("Bash(gh:*)") == null' .claude/settings.json  
 # ── 4. hooks의 중첩 배열은 matcher 식별자로 갈린다
 T=$(fresh); cd "$T"
 jq '.hooks.PreToolUse += [{"matcher":"MyTool","hooks":[]}]' \
-   .claude/settings.json > t.pyon && mv t.json .claude/settings.json
+   .claude/settings.json > t.json && mv t.json .claude/settings.json
 gridfin deploy --from "$V2"
 jq -e '[.hooks.PreToolUse[].matcher] | index("MyTool")' .claude/settings.json
 jq -e '[.hooks.PreToolUse[].matcher] | index("Edit")' .claude/settings.json
@@ -118,7 +119,7 @@ T=$(fresh); cd "$T"
 SH=$(mktemp -d); git clone -q --depth 1 "file://$V2" "$SH/h"
 #      매니페스트의 source.path 를 없는 경로로 바꿔 되돌아갈 곳을 끊는다.
 #      끊지 않으면 본문의 조회 순서대로 원본 저장소에서 base를 찾아 시험이 헛돈다
-jq '.source.path = "/nonexistent"' .harness/manifest.json > t.pyon && mv t.json .harness/manifest.json
+jq '.source.path = "/nonexistent"' .harness/manifest.json > t.json && mv t.json .harness/manifest.json
 #      먼저 base 부재가 실제로 성립하는지 확인한다 — 이 확인이 없으면 시험이 헛돈다
 ! git -C "$SH/h" cat-file -e "$(jq -r '.files[0].sourceSha' .harness/manifest.json)^{commit}"
 BEFORE=$(tree_hash .claude); E=$(entry .harness/manifest.json .claude/scripts/hooks/pre-commit.py)
@@ -160,7 +161,7 @@ test -z "$(ls -A)"
 T=$(fresh); cd "$T"
 #      식별자가 쌍이므로 matcher와 command가 둘 다 같은 원소를 하나 더 넣어야 중복이 된다
 jq '.hooks.PreToolUse += [.hooks.PreToolUse[0]]' \
-   .claude/settings.json > t.pyon && mv t.json .claude/settings.json
+   .claude/settings.json > t.json && mv t.json .claude/settings.json
 jq -e '[.hooks.PreToolUse[] | [.matcher, .hooks[0].command]] as $k
        | ($k | length) != ($k | unique | length)' .claude/settings.json
 BEFORE=$(tree_hash .claude)
@@ -171,7 +172,7 @@ test "$(tree_hash .claude)" = "$BEFORE"
 #       대조를 아예 안 하는 구현을 걸러낸다
 T=$(fresh); cd "$T"
 jq '(.files[] | select(.dest==".claude/scripts/hooks/pre-commit.py") | .sourceHash) = "sha256:0000"' \
-   .harness/manifest.json > t.pyon && mv t.json .harness/manifest.json
+   .harness/manifest.json > t.json && mv t.json .harness/manifest.json
 BEFORE=$(tree_hash .claude)
 rejected gridfin deploy --from "$V2"
 test "$(tree_hash .claude)" = "$BEFORE"
@@ -180,7 +181,7 @@ test "$(tree_hash .claude)" = "$BEFORE"
 #       식별자를 /matcher 하나로 고정한 구현은 여기서만 걸린다
 T=$(fresh); cd "$T"
 jq '.hooks.SessionStart += [{"hooks":[{"type":"command","command":"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/my-own.py"}]}]' \
-   .claude/settings.json > t.pyon && mv t.json .claude/settings.json
+   .claude/settings.json > t.json && mv t.json .claude/settings.json
 gridfin deploy --from "$V2"
 jq -e '[.hooks.SessionStart[].hooks[0].command] | index("${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/my-own.py")' .claude/settings.json
 jq -e '[.hooks.SessionStart[].hooks[0].command] | map(select(test("session-start-v2"))) | length == 1' \
@@ -198,7 +199,7 @@ diff want.py .claude/scripts/hooks/pre-commit.py
 T=$(fresh); cd "$T"
 #      값 자리에서 충돌을 만든다. 원시 배열은 원소가 곧 식별자라 충돌이 생기지 않는다
 jq '.statusLine.command = "${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/my-status.py"' \
-   .claude/settings.json > t.pyon && mv t.json .claude/settings.json
+   .claude/settings.json > t.json && mv t.json .claude/settings.json
 BEFORE=$(tree_hash .claude); E=$(entry .harness/manifest.json .claude/settings.json)
 partial  gridfin deploy --from "$CONFJ"
 test "$(tree_hash .claude)" = "$BEFORE"
@@ -224,7 +225,7 @@ T=$(fresh); cd "$T"
 #      command를 같게 두고 matcher만 null과 부재로 가른다. 그래야 구별을 실제로 때린다
 jq '.hooks.SessionStart += [{"matcher":null,"hooks":[{"type":"command","command":"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/same.py"}]},
                             {"hooks":[{"type":"command","command":"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/same.py"}]}]' \
-   .claude/settings.json > t.pyon && mv t.json .claude/settings.json
+   .claude/settings.json > t.json && mv t.json .claude/settings.json
 gridfin deploy --from "$V2"
 jq -e '[.hooks.SessionStart[] | select(.hooks[0].command == "${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/same.py")] | length == 2' \
    .claude/settings.json

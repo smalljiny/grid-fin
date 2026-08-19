@@ -212,7 +212,7 @@ payload/
 | 병합 판정 | **표준 3-way 3줄, 부재도 값** | 경우를 나열하면 빠뜨린다 (실측: 4가지 누락) |
 | JSON 소유 단위 | **배열 원소, 식별자는 포인터 쌍** | 단독 필드는 실물에서 전부 깨진다 (1차 실측) |
 | **`merge`·`owned`의 출처** | **`payload/rules.json`** — payload 최상위라 배포되지 않는다 | 코드에 박으면 배포 대상이 늘 때마다 고쳐야 한다 |
-| 매니페스트 필드 | **최상위 3개**(`attemptedSha`·`deployedAt`·`source`) + **파일별 7개**(`src`·`dest`·`merge`·`owned`·`sourceSha`·`sourceHash`·`installedHash`) | 원장 S27 정정 |
+| 매니페스트 필드 | **최상위 3개**(`attemptedSha`·`deployedAt`·`source`) + **파일별 6개**(`src`·`dest`·`merge`·`sourceSha`·`sourceHash`·`installedHash`), 그리고 **`merge`가 `json`일 때만 `owned`** | 원장 S27 정정. **텍스트 파일에 빈 `owned`를 채우지 않는다** — 뜻이 없는 값이다 |
 | 리비전 위치 | **파일별** | 부분 상태를 표현하지 못하면 다음 배포가 틀린 base를 쓴다 |
 | 실패 범위 | **전체 거부 / 파일별 건너뛰기 2종** | 조건이 입력의 문제인가 그 파일의 문제인가 |
 | 종료 코드 | **3개 + `--json`** | 종류마다 코드를 두면 늘 때마다 부르는 쪽이 표를 따라다닌다 |
