@@ -538,6 +538,30 @@ t39() {
   rm "$T/../victim.txt"
 }
 
+t40_desc="부분 실패가 남은 대상도 다시 배포하면 매니페스트를 다시 쓰지 않는다"
+t40() {
+  #      22번은 성공 경로만 본다. 충돌이나 delete_pending 이 남으면 배포할 때마다
+  #      부분 실패로 끝나는데, 그때마다 다시 쓰면 「여러 번 배포해도 아무것도 안
+  #      바뀐다」가 부분 실패 경로에서만 깨진다(교차 검토 실측)
+  T=$(fresh); cd "$T"
+  echo "// 내가 고쳤다" >> .claude/scripts/hooks/format.py
+  partial  gridfin deploy --from "$RM"
+  BEFORE=$(shasum -a 256 .harness/manifest.json | cut -d' ' -f1)
+  touch -t 200001010000 .harness/manifest.json
+  partial  gridfin deploy --from "$RM"
+  test "$(shasum -a 256 .harness/manifest.json | cut -d' ' -f1)" = "$BEFORE"
+  test "$(date -r .harness/manifest.json +%Y)" = "2000"   # 다시 쓰지 않았다
+
+  #      충돌이 남은 경우도 같다. 지우다 만 것과 병합하다 만 것은 다른 경로다
+  T=$(fresh); cd "$T"
+  awk 'NR==1{print "// 사용자가 고친 첫 줄"; next}1' .claude/scripts/hooks/pre-commit.py > t.py
+  cat t.py > .claude/scripts/hooks/pre-commit.py && rm t.py
+  partial  gridfin deploy --from "$CONF"
+  touch -t 200001010000 .harness/manifest.json
+  partial  gridfin deploy --from "$CONF"
+  test "$(date -r .harness/manifest.json +%Y)" = "2000"
+}
+
 # ── 실행기 ────────────────────────────────────────────────
 # 시험마다 함수로 나눈 이유가 있다. set -e 가 걸린 한 덩어리로 두면 첫 실패에서
 # 멈춰 어느 시험이 통과했는지 알 수 없다. 단계적 구현에서는 대부분의 시험이
@@ -546,7 +570,7 @@ t39() {
 #   bash tests/verify-deploy.sh          전부
 #   bash tests/verify-deploy.sh 1 2 19   고른 것만
 
-ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39"
+ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40"
 
 restore_fixtures() {
   # 앞 시험이 fixture 를 더럽힌 채 실패해도 다음 시험이 영향받지 않게 되돌린다.

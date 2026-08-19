@@ -271,7 +271,8 @@ def deploy(target: Path, from_arg: str | None) -> int:
         pass
 
     rules = load_rules(harness, sha)
-    prev = {f["dest"]: f for f in read_manifest(target).get("files", [])}
+    prev_manifest = read_manifest(target)
+    prev = {f["dest"]: f for f in prev_manifest.get("files", [])}
 
     # ── 1단계. 계산만 한다. 아무것도 쓰지 않는다.
     # 멱등성 때문에 이 순서여야 한다 — 「바뀐 것이 없으면 매니페스트를 다시 쓰지
@@ -416,14 +417,20 @@ def deploy(target: Path, from_arg: str | None) -> int:
     files = [p["entry"] for p in plan if p["entry"] is not None]
     manifest = {
         "attemptedSha": sha,
-        "deployedAt": subprocess.run(["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"],
-                                     check=True, stdout=subprocess.PIPE).stdout.decode().strip(),
         "source": {"remote": remote, "path": str(harness)},
         "files": sorted(files, key=lambda f: f["dest"]),
     }
-    mp = target / ".harness" / "manifest.json"
-    mp.parent.mkdir(parents=True, exist_ok=True)
-    mp.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    # deployedAt 을 뺀 나머지가 그대로면 다시 쓰지 않는다. 충돌이나 delete_pending 이
+    # 남은 대상은 배포할 때마다 부분 실패로 끝나는데, 그때마다 매니페스트를 다시 쓰면
+    # 「여러 번 배포해도 아무것도 안 바뀐다」가 부분 실패 경로에서만 깨진다(검토 실측).
+    if any(prev_manifest.get(k) != v for k, v in manifest.items()):
+        now = subprocess.run(["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"],
+                             check=True, stdout=subprocess.PIPE).stdout.decode().strip()
+        out = {"attemptedSha": manifest["attemptedSha"], "deployedAt": now,
+               "source": manifest["source"], "files": manifest["files"]}
+        mp = target / ".harness" / "manifest.json"
+        mp.parent.mkdir(parents=True, exist_ok=True)
+        mp.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     for p in skipped:
         print(f"{p['status']}: {p['dest']} — {p.get('detail','충돌')}", file=sys.stderr)
