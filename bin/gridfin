@@ -4,17 +4,189 @@
 # ///
 """gridfin — 하네스 배포 도구.
 
-T2에서 deploy 를 채운다. 지금은 뼈대만 있다.
-종료 코드는 셋이다 — 0 완전 성공 · 1 부분 실패 · 2 전체 거부.
+종료 코드는 셋이다. 0 완전 성공 · 1 부분 실패 · 2 전체 거부.
+세부 원인은 종료 코드가 아니라 --json 이 담는다(T6에서 만든다).
+
+지금 있는 것은 T2까지다 — 배포와 매니페스트와 종료 코드.
+병합은 T3, 삭제는 T4, 저장소 접점의 안전 조건은 T5가 만든다.
 """
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import subprocess
 import sys
+from pathlib import Path
+
+OK, PARTIAL, REJECTED = 0, 1, 2
+
+# payload 의 하위 디렉터리가 대상의 어디로 가는가. 최상위 파일은 목적지가 없어
+# 배포되지 않는다 — payload/rules.json 이 그래서 안전하다.
+MAPPING = {"claude": ".claude", "root": ""}
+
+
+def die(reason: str) -> int:
+    print(f"거부: {reason}", file=sys.stderr)
+    return REJECTED
+
+
+def git(repo: Path, *args: str) -> bytes:
+    return subprocess.run(
+        ["git", "-C", str(repo), *args],
+        check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    ).stdout
+
+
+def is_repo(path: Path) -> bool:
+    try:
+        git(path, "rev-parse", "--is-inside-work-tree")
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError, NotADirectoryError):
+        return False
+
+
+def sha256(data: bytes) -> str:
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def read_manifest(target: Path) -> dict:
+    p = target / ".harness" / "manifest.json"
+    if not p.is_file():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+
+
+def resolve_source(target: Path, from_arg: str | None) -> tuple[Path | None, str]:
+    """--from → 매니페스트의 source.path → source.remote 순으로 찾는다."""
+    if from_arg:
+        p = Path(from_arg).expanduser().resolve()
+        return (p, "") if is_repo(p) else (None, f"--from 이 git 저장소가 아니다: {p}")
+    src = read_manifest(target).get("source", {})
+    if src.get("path"):
+        p = Path(src["path"])
+        if is_repo(p):
+            return p, ""
+    if src.get("remote"):
+        # T2는 fetch 를 만들지 않는다. 여기까지 왔다는 것은 경로가 죽었다는 뜻이다.
+        return None, "source.remote 로 가져오는 것은 아직 만들지 않았다"
+    return None, "no_source — 첫 배포에는 --from 이 필요하다"
+
+
+def payload_entries(harness: Path, sha: str) -> list[tuple[str, str, str]]:
+    """(mode, src, dest) 목록. git 이 이름과 모드의 원천이다."""
+    out = git(harness, "ls-tree", "-r", "-z", sha, "payload/")
+    entries = []
+    for rec in out.split(b"\0"):
+        if not rec:
+            continue
+        meta, _, name = rec.partition(b"\t")
+        mode, kind, _ = meta.decode().split(" ", 2)
+        if kind != "blob":
+            continue
+        src = name.decode("utf-8")
+        parts = src.split("/", 2)          # payload / <sub> / <나머지>
+        if len(parts) < 3 or parts[1] not in MAPPING:
+            continue                       # 최상위 파일과 모르는 하위 디렉터리는 건너뛴다
+        prefix = MAPPING[parts[1]]
+        dest = f"{prefix}/{parts[2]}" if prefix else parts[2]
+        entries.append((mode, src, dest))
+    return sorted(entries, key=lambda e: e[2])
+
+
+def load_rules(harness: Path, sha: str) -> dict:
+    try:
+        raw = git(harness, "show", f"{sha}:payload/rules.json")
+    except subprocess.CalledProcessError:
+        return {}
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+
+
+def deploy(target: Path, from_arg: str | None) -> int:
+    harness, why = resolve_source(target, from_arg)
+    if harness is None:
+        return die(why)
+
+    sha = git(harness, "rev-parse", "HEAD").decode().strip()
+    remote = ""
+    try:
+        remote = git(harness, "remote", "get-url", "origin").decode().strip()
+    except subprocess.CalledProcessError:
+        pass                                # 원격이 없는 저장소는 빈 문자열이다
+
+    rules = load_rules(harness, sha)
+    files, skipped = [], []
+
+    for mode, src, dest in payload_entries(harness, sha):
+        rule = rules.get(src[len("payload/"):], {})
+        blob = git(harness, "show", f"{sha}:{src}")
+        out = target / dest
+
+        if out.exists():
+            # 이미 있는 파일은 병합 대상이다. T3 이 만든다 — 조용히 덮지 않는다.
+            skipped.append(dest)
+            prev = next((f for f in read_manifest(target).get("files", [])
+                         if f.get("dest") == dest), None)
+            if prev:
+                files.append(prev)
+            continue
+
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(blob)
+        if mode.endswith("755"):
+            out.chmod(out.stat().st_mode | 0o111)
+
+        entry = {
+            "src": src,
+            "dest": dest,
+            "merge": rule.get("merge", "text"),
+            "sourceSha": sha,
+            "sourceHash": sha256(blob),
+            "installedHash": sha256(out.read_bytes()),
+        }
+        if entry["merge"] == "json":
+            entry["owned"] = rule.get("owned", [])
+        files.append(entry)
+
+    manifest = {
+        "attemptedSha": sha,
+        "deployedAt": subprocess.run(
+            ["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"], check=True,
+            stdout=subprocess.PIPE).stdout.decode().strip(),
+        "source": {"remote": remote, "path": str(harness)},
+        "files": files,
+    }
+    mp = target / ".harness" / "manifest.json"
+    mp.parent.mkdir(parents=True, exist_ok=True)
+    mp.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                  encoding="utf-8")
+
+    for d in skipped:
+        print(f"건너뜀: {d} — 병합은 아직 만들지 않았다", file=sys.stderr)
+    return PARTIAL if skipped else OK
+
 
 def main(argv: list[str]) -> int:
-    if not argv:
-        print("gridfin <deploy> [옵션]", file=sys.stderr)
-        return 2
-    print(f"gridfin: '{argv[0]}' 은 아직 구현되지 않았다", file=sys.stderr)
-    return 2
+    if not argv or argv[0] != "deploy":
+        print("사용법: gridfin deploy [--from <하네스 저장소>]", file=sys.stderr)
+        return REJECTED
+    rest = argv[1:]
+    from_arg = None
+    while rest:
+        if rest[0] == "--from" and len(rest) > 1:
+            from_arg, rest = rest[1], rest[2:]
+        elif rest[0] == "--json":
+            rest = rest[1:]                 # T6 이 만든다. 지금은 받기만 한다
+        else:
+            return die(f"모르는 인자: {rest[0]}")
+    return deploy(Path.cwd(), from_arg)
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

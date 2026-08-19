@@ -259,11 +259,17 @@ jq -e '[.files[].dest] | index(".claude/scripts/hooks/format.py") == null' .harn
 
 # ── 22. 멱등성 — 같은 하네스로 세 번 배포해도 아무것도 안 바뀐다
 T=$(fresh); cd "$T"
+#      내용 비교만 하면 안 된다. deployedAt 이 초 단위라 빠른 재배포는
+#      우연히 같은 값이 나와 「다시 쓰는 구현」이 통과해 버린다(실측).
+#      mtime 은 「안 썼다」와 「같은 내용을 다시 썼다」를 가른다
 BEFORE="$(tree_hash .claude)$(shasum -a 256 .harness/manifest.json | cut -d' ' -f1)"
+#      mtime 도 초 단위라 같은 초에 묻힌다. 옛 시각으로 돌려놓고 그대로인지 본다 —
+#      시계 해상도에 기대지 않는다
+touch -t 200001010000 .harness/manifest.json
 gridfin deploy --from "$V1"
 gridfin deploy --from "$V1"
 test "$(tree_hash .claude)$(shasum -a 256 .harness/manifest.json | cut -d' ' -f1)" = "$BEFORE"
-#      deployedAt 때문에 매니페스트를 매번 다시 쓰는 구현이 여기서 걸린다
+test "$(date -r .harness/manifest.json +%Y)" = "2000"   # 다시 쓰지 않았다
 
 # ── 23. 연쇄 갱신 — V1 → V2 → V3에서 base가 매번 올바른 리비전에서 나온다
 T=$(fresh); cd "$T"
