@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/session-start.js\"" }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/pre-commit.js\"" }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": ["Bash(git:*)", "Bash(gh:*)"]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/status.js\""
+  }
+}
