@@ -622,6 +622,9 @@ t42() {
   chmod 444 .git/info/exclude
   rejected gridfin deploy --from "$V1"
   test ! -e .claude
+  #      잠금이 만든 .harness/ 도 남으면 안 된다. 무시 목록이 아직 안 걸려 있어
+  #      git status 에 그대로 뜬다(실측). tree_hash 는 빈 디렉터리를 못 본다
+  test ! -e .harness
   chmod 644 .git/info/exclude
 }
 

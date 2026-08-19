@@ -332,6 +332,13 @@ def deploy(target: Path, from_arg: str | None) -> int:
             lock.rmdir()    # 전체 거부로 나가는 길에도 푼다. 안 그러면 다음 배포가 막힌다
         except OSError:
             pass
+        try:
+            # 잠금이 만든 .harness/ 를 전체 거부가 남기면 안 된다. 첫 배포가 거부되면
+            # 무시 목록도 아직 안 걸려 있어 git status 에 그대로 뜬다(실측).
+            # 비어 있을 때만 지워지므로 정상 배포의 매니페스트는 살아남는다.
+            lock.parent.rmdir()
+        except OSError:
+            pass
 
 
 def run_deploy(target: Path, harness: Path) -> int:
