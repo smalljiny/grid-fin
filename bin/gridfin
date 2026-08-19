@@ -336,9 +336,33 @@ def deploy(target: Path, from_arg: str | None) -> int:
         plan.append({"dest": dest, "bytes": out, "mode": mode, "entry": entry,
                      "status": "unchanged" if out == cur else "updated"})
 
+    # 사라진 배포물 — 이전 매니페스트에 있고 이번 payload 에 없는 dest.
+    # 사용자가 안 건드린 것만 지운다. 기준은 installedHash 다. 병합된 파일은
+    # 설치본이 업스트림 원문과 다르므로 sourceHash 로 재면 예전에 병합된 파일이
+    # 영영 안 지워진다.
+    seen = {p["dest"] for p in plan}
+    for dest, old in prev.items():
+        if dest in seen:
+            continue
+        live = target / dest
+        if path_has_symlink(target, dest):
+            plan.append({"dest": dest, "status": "skipped",
+                         "detail": "경로에 심볼릭 링크가 있다", "entry": old})
+        elif not live.exists():
+            plan.append({"dest": dest, "status": "deleted", "entry": None})
+        elif sha256(live.read_bytes()) != old.get("installedHash"):
+            # 항목을 남겨야 다음 배포가 다시 시도한다. 필드가 없는 옛 매니페스트도
+            # 불일치로 본다 — 안 지우는 쪽이 안전하다.
+            plan.append({"dest": dest, "status": "delete_pending",
+                         "detail": "사용자가 고쳐서 지우지 않았다", "entry": old})
+        else:
+            plan.append({"dest": dest, "status": "deleted", "entry": None, "remove": True})
+
     # ── 2단계. 바뀐 것이 없으면 아무것도 쓰지 않는다.
-    changed = any(p["status"] == "updated" for p in plan)
-    skipped = [p for p in plan if p["status"] in ("skipped", "conflict")]
+    # 삭제는 파일이 이미 없더라도 매니페스트에서 항목을 빼야 하므로 changed 다.
+    # 반면 종료 코드는 0 이다 — 지운 것은 실패가 아니다.
+    changed = any(p["status"] in ("updated", "deleted") for p in plan)
+    skipped = [p for p in plan if p["status"] in ("skipped", "conflict", "delete_pending")]
     # 치울 충돌 보고물이 남아 있으면 바뀐 것이 없어도 지나가면 안 된다.
     stale = [p for p in plan if p["status"] in ("updated", "unchanged")
              and Path(str(target / p["dest"]) + ".merged").exists()]
@@ -356,6 +380,8 @@ def deploy(target: Path, from_arg: str | None) -> int:
             m = Path(str(out) + ".merged")
             if m.exists():
                 m.unlink()          # 성공한 배포가 옛 충돌 보고물을 치운다
+        elif p["status"] == "deleted" and p.get("remove"):
+            (target / p["dest"]).unlink()
         elif p["status"] == "conflict":
             m = Path(str(target / p["dest"]) + ".merged")
             if m.is_symlink():
@@ -365,9 +391,9 @@ def deploy(target: Path, from_arg: str | None) -> int:
     if not changed and not skipped:
         return OK                   # 보고물만 치웠다. 매니페스트는 그대로 둔다
 
+    # prev 를 통째로 이어붙이지 않는다. 사라진 배포물은 위 순회가 이미 판정했고,
+    # 지운 것은 entry 가 None 이라 여기서 빠진다. 이어붙이면 되살아난다.
     files = [p["entry"] for p in plan if p["entry"] is not None]
-    known = {f["dest"] for f in files}
-    files += [f for d, f in prev.items() if d not in known]
     manifest = {
         "attemptedSha": sha,
         "deployedAt": subprocess.run(["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"],
