@@ -108,6 +108,112 @@ def load_rules(harness: Path, sha: str) -> dict:
         return {}
 
 
+MISSING = object()   # 자리가 없는 것. JSON null 과 다르다.
+
+
+class Conflict(Exception):
+    """양쪽이 같은 자리를 다르게 고쳤다. 살아 있는 파일을 건드리지 않는다."""
+
+
+def ptr_get(doc, pointer: str):
+    """JSON Pointer. 없으면 MISSING 을 돌려준다 — null 과 구별한다."""
+    cur = doc
+    if pointer == "":
+        return cur
+    for raw in pointer.lstrip("/").split("/"):
+        part = raw.replace("~1", "/").replace("~0", "~")
+        if isinstance(cur, list):
+            if not part.isdigit() or int(part) >= len(cur):
+                return MISSING
+            cur = cur[int(part)]
+        elif isinstance(cur, dict):
+            if part not in cur:
+                return MISSING
+            cur = cur[part]
+        else:
+            return MISSING
+    return cur
+
+
+def ptr_set(doc, pointer: str, value) -> None:
+    parts = [p.replace("~1", "/").replace("~0", "~") for p in pointer.lstrip("/").split("/")]
+    cur = doc
+    for part in parts[:-1]:
+        cur = cur.setdefault(part, {})
+    last = parts[-1]
+    if value is MISSING:
+        cur.pop(last, None)
+    else:
+        cur[last] = value
+
+
+def three_way(base, ours, theirs):
+    """판정 세 줄. 부재도 값으로 센다."""
+    if ours == base and type(ours) is type(base):
+        return theirs
+    if theirs == base and type(theirs) is type(base):
+        return ours
+    if ours == theirs and type(ours) is type(theirs):
+        return ours
+    raise Conflict()
+
+
+def identity(element, key):
+    if key is None:
+        return json.dumps(element, sort_keys=True, ensure_ascii=False)
+    vals = []
+    for ptr in key:
+        v = ptr_get(element, ptr)
+        vals.append("\u0000없음" if v is MISSING else json.dumps(v, sort_keys=True, ensure_ascii=False))
+    return "\u0001".join(vals)
+
+
+def index_by_identity(arr, key, where: str, pointer: str) -> dict:
+    if arr is MISSING:
+        return {}
+    if not isinstance(arr, list):
+        raise Rejected(f"{pointer} 가 {where} 에서 배열이 아니다")
+    out = {}
+    for el in arr:
+        i = identity(el, key)
+        if i in out:
+            raise Rejected(f"{pointer} 의 식별자가 {where} 에서 유일하지 않다")
+        out[i] = el
+    return out
+
+
+def merge_json(base: dict, ours: dict, theirs: dict, owned: list) -> dict:
+    result = json.loads(json.dumps(ours))
+    for rule in owned:
+        ptr, key = rule["pointer"], rule.get("key")
+        b, o, t = (ptr_get(d, ptr) for d in (base, ours, theirs))
+        if any(isinstance(v, list) for v in (b, o, t)):
+            bi = index_by_identity(b, key, "base", ptr)
+            oi = index_by_identity(o, key, "대상", ptr)
+            ti = index_by_identity(t, key, "새 버전", ptr)
+            merged = []
+            for i in list(oi) + [i for i in ti if i not in oi] + [i for i in bi if i not in oi and i not in ti]:
+                v = three_way(bi.get(i, MISSING), oi.get(i, MISSING), ti.get(i, MISSING))
+                if v is not MISSING:
+                    merged.append(v)
+            ptr_set(result, ptr, merged)
+        else:
+            ptr_set(result, ptr, three_way(b, o, t))
+    return result
+
+
+def merge_text(live: Path, base: bytes, theirs: bytes, tmp: Path) -> tuple[bytes, bool]:
+    """(내용, 충돌인가). git merge-file 은 인덱스를 쓰지 않는다."""
+    bp, tp = tmp / "base", tmp / "theirs"
+    bp.write_bytes(base)
+    tp.write_bytes(theirs)
+    r = subprocess.run(["git", "merge-file", "-p", str(live), str(bp), str(tp)],
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if r.returncode == 255 or r.returncode < 0:
+        raise Rejected(f"git merge-file 이 실패했다: {r.stderr.decode(errors='replace').strip()}")
+    return r.stdout, r.returncode != 0
+
+
 def deploy(target: Path, from_arg: str | None) -> int:
     harness, why = resolve_source(target, from_arg)
     if harness is None:
@@ -118,57 +224,128 @@ def deploy(target: Path, from_arg: str | None) -> int:
     try:
         remote = git(harness, "remote", "get-url", "origin").decode().strip()
     except subprocess.CalledProcessError:
-        pass                                # 원격이 없는 저장소는 빈 문자열이다
+        pass
 
     rules = load_rules(harness, sha)
-    files, skipped = [], []
+    prev = {f["dest"]: f for f in read_manifest(target).get("files", [])}
+
+    # ── 1단계. 계산만 한다. 아무것도 쓰지 않는다.
+    # 멱등성 때문에 이 순서여야 한다 — 「바뀐 것이 없으면 매니페스트를 다시 쓰지
+    # 않는다」를 판정하려면 모든 파일의 결과를 먼저 알아야 한다.
+    import tempfile
+    tmp = Path(tempfile.mkdtemp())
+    plan: list[dict] = []
 
     for mode, src, dest in payload_entries(harness, sha):
         rule = rules.get(src[len("payload/"):], {})
-        blob = git(harness, "show", f"{sha}:{src}")
-        out = target / dest
+        kind = rule.get("merge", "text")
+        theirs = git(harness, "show", f"{sha}:{src}")
+        live = target / dest
+        entry = {"src": src, "dest": dest, "merge": kind, "sourceSha": sha,
+                 "sourceHash": sha256(theirs), "installedHash": sha256(theirs)}
+        if kind == "json":
+            entry["owned"] = rule.get("owned", [])
 
-        if out.exists():
-            # 이미 있는 파일은 병합 대상이다. T3 이 만든다 — 조용히 덮지 않는다.
-            skipped.append(dest)
-            prev = next((f for f in read_manifest(target).get("files", [])
-                         if f.get("dest") == dest), None)
-            if prev:
-                files.append(prev)
+        if not live.exists():
+            plan.append({"dest": dest, "bytes": theirs, "mode": mode,
+                         "entry": entry, "status": "updated"})
             continue
 
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_bytes(blob)
-        if mode.endswith("755"):
-            out.chmod(out.stat().st_mode | 0o111)
+        # 심볼릭 링크를 따라가면 저장소 밖의 파일을 고친다. T3 이 병합을 넣으면서
+        # 그 경로가 생겼으므로 여기서 막는다 — 계획은 T5 로 두었으나 위험을 만든 쪽이
+        # 막는 편이 맞다. 읽기만 하는 검사는 링크를 따라간다.
+        if live.is_symlink() or any(q.is_symlink() for q in live.parents if target in q.parents or q == target):
+            plan.append({"dest": dest, "status": "skipped",
+                         "detail": "경로에 심볼릭 링크가 있다", "entry": prev.get(dest)})
+            continue
 
-        entry = {
-            "src": src,
-            "dest": dest,
-            "merge": rule.get("merge", "text"),
-            "sourceSha": sha,
-            "sourceHash": sha256(blob),
-            "installedHash": sha256(out.read_bytes()),
-        }
-        if entry["merge"] == "json":
-            entry["owned"] = rule.get("owned", [])
-        files.append(entry)
+        old = prev.get(dest)
+        if old is None:
+            plan.append({"dest": dest, "status": "skipped",
+                         "detail": "배포한 적이 없어 base 가 없다", "entry": None})
+            continue
 
+        try:
+            base = git(harness, "show", f"{old['sourceSha']}:{src}")
+        except subprocess.CalledProcessError:
+            plan.append({"dest": dest, "status": "skipped",
+                         "detail": "base 를 못 꺼냈다", "entry": old})
+            continue
+        if sha256(base) != old["sourceHash"]:
+            return die(f"source_hash_mismatch — {dest} 의 base 가 그때 배포한 것과 다르다")
+
+        cur = live.read_bytes()
+        try:
+            if kind == "json":
+                # 무효 JSON 은 구조 병합 전에 거른다. 파일별 건너뛰기이지 전체 거부가 아니다.
+                try:
+                    ours_doc = json.loads(cur)
+                except json.JSONDecodeError:
+                    plan.append({"dest": dest, "status": "skipped",
+                                 "detail": "대상이 유효한 JSON 이 아니다", "entry": old})
+                    continue
+                merged_doc = merge_json(json.loads(base), ours_doc, json.loads(theirs),
+                                        rule.get("owned", []))
+                out = (json.dumps(merged_doc, ensure_ascii=False, indent=2) + "\n").encode()
+                conflicted = False
+            else:
+                out, conflicted = merge_text(live, base, theirs, tmp)
+        except Conflict:
+            partial_doc = json.loads(cur)
+            plan.append({"dest": dest, "status": "conflict", "entry": old,
+                         "merged": (json.dumps(partial_doc, ensure_ascii=False, indent=2) + "\n").encode()})
+            continue
+
+        if conflicted:
+            plan.append({"dest": dest, "status": "conflict", "entry": old, "merged": out})
+            continue
+
+        entry["installedHash"] = sha256(out)
+        plan.append({"dest": dest, "bytes": out, "mode": mode, "entry": entry,
+                     "status": "unchanged" if out == cur else "updated"})
+
+    # ── 2단계. 바뀐 것이 없으면 아무것도 쓰지 않는다.
+    changed = any(p["status"] == "updated" for p in plan)
+    skipped = [p for p in plan if p["status"] in ("skipped", "conflict")]
+    # 치울 충돌 보고물이 남아 있으면 바뀐 것이 없어도 지나가면 안 된다.
+    stale = [p for p in plan if p["status"] in ("updated", "unchanged")
+             and Path(str(target / p["dest"]) + ".merged").exists()]
+    if not changed and not skipped and not stale:
+        return OK
+
+    for p in plan:
+        if p["status"] in ("updated", "unchanged"):
+            out = target / p["dest"]
+            if p["status"] == "updated":
+                out.parent.mkdir(parents=True, exist_ok=True)
+                out.write_bytes(p["bytes"])
+                if p["mode"].endswith("755"):
+                    out.chmod(out.stat().st_mode | 0o111)
+            m = Path(str(out) + ".merged")
+            if m.exists():
+                m.unlink()          # 성공한 배포가 옛 충돌 보고물을 치운다
+        elif p["status"] == "conflict":
+            Path(str(target / p["dest"]) + ".merged").write_bytes(p["merged"])
+
+    if not changed and not skipped:
+        return OK                   # 보고물만 치웠다. 매니페스트는 그대로 둔다
+
+    files = [p["entry"] for p in plan if p["entry"] is not None]
+    known = {f["dest"] for f in files}
+    files += [f for d, f in prev.items() if d not in known]
     manifest = {
         "attemptedSha": sha,
-        "deployedAt": subprocess.run(
-            ["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"], check=True,
-            stdout=subprocess.PIPE).stdout.decode().strip(),
+        "deployedAt": subprocess.run(["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"],
+                                     check=True, stdout=subprocess.PIPE).stdout.decode().strip(),
         "source": {"remote": remote, "path": str(harness)},
-        "files": files,
+        "files": sorted(files, key=lambda f: f["dest"]),
     }
     mp = target / ".harness" / "manifest.json"
     mp.parent.mkdir(parents=True, exist_ok=True)
-    mp.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
-                  encoding="utf-8")
+    mp.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    for d in skipped:
-        print(f"건너뜀: {d} — 병합은 아직 만들지 않았다", file=sys.stderr)
+    for p in skipped:
+        print(f"{p['status']}: {p['dest']} — {p.get('detail','충돌')}", file=sys.stderr)
     return PARTIAL if skipped else OK
 
 
