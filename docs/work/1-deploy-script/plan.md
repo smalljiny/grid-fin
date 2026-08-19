@@ -25,8 +25,9 @@ issue: 1
 
 **무엇**: `payload/`에 자리표시본을 넣고 `tests/make-fixtures.sh`를 만든다.
 
+- `bin/gridfin` — uv 기반 Python. **뼈대만.** deploy 는 T2가 채운다
 - `payload/claude/settings.json` — `hooks`(SessionStart·PreToolUse) · `permissions.allow` · `statusLine`
-- `payload/claude/scripts/hooks/{session-start,pre-commit,format}.js` — **각 3줄, 파일마다 자기 이름을 담는다**
+- `payload/claude/scripts/hooks/{session-start,pre-commit,format}.py` — **각 3줄, 파일마다 자기 이름을 담는다**
 - `tests/make-fixtures.sh` — 하네스 저장소 8개(V1·V2·V3·RM·CONF·CONFJ·V_SPACE·V_ROOT)를 만들고 경로를 내보낸다
 - `docs/tmp/impl-later/verify-deploy.sh` → **`tests/verify-deploy.sh`로 옮긴다**
 

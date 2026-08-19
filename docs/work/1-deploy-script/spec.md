@@ -195,6 +195,9 @@ payload/
 
 | 항목 | 결정 | 근거 |
 |---|---|---|
+| **하네스가 만드는 실행물** | **bash와 uv 기반 Python뿐. Node를 쓰지 않는다** | 원장 S30 — 대상 프로젝트와 의존성이 뒤섞인 경험 |
+| **훅 호출** | **셔뱅 `#!/usr/bin/env -S uv run --script` + `settings.json`은 경로만** | 실행 비트 보존(C15)이 몸값을 한다. `env -S` 동작을 실측했다 |
+| **`gridfin` 찾기** | **저장소의 `bin/`. `verify-deploy.sh`가 PATH 앞에 붙인다** | 설치 없이 시험이 돈다. 실사용 설치는 나중에 정한다 |
 | 소스 디렉터리 이름 | `payload/` | 설계가 쓰는 「배포물」과 대응하고 `src/`와 부딪히지 않는다 |
 | 목적지 이름에 점 | **붙이지 않는다** | `.gitignore`의 앵커 없는 `.claude/`가 하위까지 잡는다 (1차 실측) |
 | CLI 이름 | `gridfin` | 이슈 #1~#4의 검증 명령이 매여 있다 |
@@ -231,7 +234,7 @@ payload/
 
 | 무엇 | 어디 |
 |---|---|
-| 배포 스크립트 | 구현 위치는 정하지 않는다 |
+| 배포 스크립트 | `bin/gridfin` — **uv 기반 Python** |
 | 매니페스트 | 대상의 `.harness/manifest.json` |
 | fixture payload | `payload/` |
 | 하네스 저장소 8개를 만드는 스크립트 | `tests/make-fixtures.sh` |
@@ -239,23 +242,28 @@ payload/
 
 **검증 스크립트는 배포물이 아니다.** 배포 대상 목록에 없고 대상 프로젝트로 나가지 않는다. **구현이 살아 있는 동안 계속 돌아야 하므로 소멸 문서와 함께 지우지 않는다.**
 
-**fixture가 이 모양이어야 하는 이유가 있다.** 갱신·삭제·충돌 경로를 전부 밟으려면 **지울 파일**(`format.js`)과 **하네스가 뺄 배열 원소**(`permissions.allow`의 항목 하나)와 **`matcher`가 있는 사건과 없는 사건**(`PreToolUse`·`SessionStart`)과 **값 자리**(`statusLine`)를 다 가져야 한다. **검증 준비물 V1이 곧 이 자리표시본이다.**
+**fixture가 이 모양이어야 하는 이유가 있다.** 갱신·삭제·충돌 경로를 전부 밟으려면 **지울 파일**(`format.py`)과 **하네스가 뺄 배열 원소**(`permissions.allow`의 항목 하나)와 **`matcher`가 있는 사건과 없는 사건**(`PreToolUse`·`SessionStart`)과 **값 자리**(`statusLine`)를 다 가져야 한다. **검증 준비물 V1이 곧 이 자리표시본이다.**
 
 ```json
 { "hooks": {
-    "SessionStart": [ { "hooks": [ { "type": "command", "command": "node .../session-start.js" } ] } ],
+    "SessionStart": [ { "hooks": [ { "type": "command", "command": ".../session-start.py" } ] } ],
     "PreToolUse":   [ { "matcher": "Write",
-                        "hooks": [ { "type": "command", "command": "node .../pre-commit.js" } ] } ] },
+                        "hooks": [ { "type": "command", "command": ".../pre-commit.py" } ] } ] },
   "permissions": { "allow": ["Bash(git:*)", "Bash(gh:*)"] },
-  "statusLine": { "type": "command", "command": "node .../status.js" } }
+  "statusLine": { "type": "command", "command": ".../status.py" } }
 ```
 
 **자리표시본 훅 스크립트는 파일마다 자기 이름을 담는다.**
 
-```js
-// #2가 채운다 — 지금은 자리표시본
-// hook: session-start
-process.exit(0);
+```python
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# ///
+"""#2가 채운다 — 지금은 자리표시본. hook: session-start"""
+import sys
+
+sys.exit(0)
 ```
 
 **내용이 같으면 `sourceHash`가 셋 다 같아져 파일을 뒤바꿔 쓰는 구현이 해시 비교를 통과한다.** 가르는 비용이 한 줄이다. 3줄인 것도 이유가 있다 — **검증이 2번째 줄에 사용자 줄을 넣어 3-way merge를 시험한다.**

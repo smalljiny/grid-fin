@@ -12,6 +12,9 @@ set -euo pipefail
 
 # 이 실행이 만드는 임시 디렉터리를 한 곳에 모은다. 끝나면 통째로 지운다.
 # fixture 저장소와 시험마다 만드는 대상 디렉터리가 전부 여기 들어간다.
+# gridfin 은 저장소의 bin/ 에 있다. 전역 설치 없이 시험이 돌게 PATH 앞에 붙인다.
+PATH="$(cd "$(dirname "$0")/../bin" && pwd):$PATH"; export PATH
+
 GRIDFIN_RUN=$(mktemp -d)
 trap 'rm -rf "$GRIDFIN_RUN"' EXIT
 export TMPDIR="$GRIDFIN_RUN"
@@ -23,12 +26,12 @@ eval "$(bash tests/make-fixtures.sh)"   # V1 V2 V3 RM CONF CONFJ V_SPACE V_ROOT 
 
 # V1     : 「fixture payload」 절의 자리표시본 그대로
 # V2     : V1에서 allow에 "Bash(rg:*)" 추가·"Bash(gh:*)" 삭제 / PreToolUse에 matcher "Edit" 추가
-#          / SessionStart의 command를 session-start-v2.js로 변경 / pre-commit.js 끝에 한 줄 추가
-# V3     : V2에서 pre-commit.js 끝에 또 한 줄 추가
-# RM     : V1에서 format.js를 뺀 것
-# CONF   : V1에서 pre-commit.js의 첫 줄을 고친 것
-# CONFJ  : V1에서 statusLine.command를 "node .../status-harness.js"로 바꾼 것
-# V_SPACE: V1에 payload/claude/scripts/hooks/"이름 있는 훅.js" 를 더한 것
+#          / SessionStart의 command를 session-start-v2.py로 변경 / pre-commit.py 끝에 한 줄 추가
+# V3     : V2에서 pre-commit.py 끝에 또 한 줄 추가
+# RM     : V1에서 format.py를 뺀 것
+# CONF   : V1에서 pre-commit.py의 첫 줄을 고친 것
+# CONFJ  : V1에서 statusLine.command를 ".../status-harness.py"로 바꾼 것
+# V_SPACE: V1에 payload/claude/scripts/hooks/"이름 있는 훅.py" 를 더한 것
 # V_ROOT : V1에 payload/root/gridfin.json 을 더한 것
 
 # 건너뛴 파일의 매니페스트 항목이 그대로인지 보는 보조 함수
@@ -69,7 +72,7 @@ done
 # ── 3. JSON 배열은 원소 단위로 병합된다 — 추가·삭제·보존을 함께 본다
 T=$(fresh); cd "$T"
 jq '.env.MINE = "keep" | .permissions.allow += ["Bash(mytool:*)"]' \
-   .claude/settings.json > t.json && mv t.json .claude/settings.json
+   .claude/settings.json > t.pyon && mv t.json .claude/settings.json
 gridfin deploy --from "$V2"
 jq -e '.env.MINE == "keep"' .claude/settings.json                               # owned 밖은 그대로
 jq -e '.permissions.allow | index("Bash(mytool:*)")' .claude/settings.json       # 사용자 원소가 남는다
@@ -79,7 +82,7 @@ jq -e '.permissions.allow | index("Bash(gh:*)") == null' .claude/settings.json  
 # ── 4. hooks의 중첩 배열은 matcher 식별자로 갈린다
 T=$(fresh); cd "$T"
 jq '.hooks.PreToolUse += [{"matcher":"MyTool","hooks":[]}]' \
-   .claude/settings.json > t.json && mv t.json .claude/settings.json
+   .claude/settings.json > t.pyon && mv t.json .claude/settings.json
 gridfin deploy --from "$V2"
 jq -e '[.hooks.PreToolUse[].matcher] | index("MyTool")' .claude/settings.json
 jq -e '[.hooks.PreToolUse[].matcher] | index("Edit")' .claude/settings.json
@@ -87,27 +90,27 @@ jq -e '[.hooks.PreToolUse[].matcher] | index("Edit")' .claude/settings.json
 # ── 5. 텍스트는 3-way merge다 — 이어붙이기와 구별한다
 #      사용자는 파일 중간에, V2는 파일 끝에 줄을 더한다
 T=$(fresh); cd "$T"
-awk 'NR==2{print "// 사용자가 중간에 넣은 줄"}1' .claude/scripts/hooks/pre-commit.js > t.js
-cat t.js > .claude/scripts/hooks/pre-commit.js && rm t.js   # mv 는 모드를 떨어뜨린다
+awk 'NR==2{print "// 사용자가 중간에 넣은 줄"}1' .claude/scripts/hooks/pre-commit.py > t.py
+cat t.py > .claude/scripts/hooks/pre-commit.py && rm t.py   # mv 는 모드를 떨어뜨린다
 gridfin deploy --from "$V2"
-git -C "$V2" show HEAD:payload/claude/scripts/hooks/pre-commit.js |
-  awk 'NR==2{print "// 사용자가 중간에 넣은 줄"}1' > expected.js
-diff expected.js .claude/scripts/hooks/pre-commit.js
+git -C "$V2" show HEAD:payload/claude/scripts/hooks/pre-commit.py |
+  awk 'NR==2{print "// 사용자가 중간에 넣은 줄"}1' > expected.py
+diff expected.py .claude/scripts/hooks/pre-commit.py
 #      단순 이어붙이기는 사용자 줄이 끝으로 가므로 이 비교에서 실패한다
 
 # ── 6. 충돌하면 살아 있는 파일이 바이트까지 그대로다
 T=$(fresh); cd "$T"
 #      사용자와 CONF가 같은 첫 줄을 각각 다르게 고친 상태를 만든다
 #      mv 로 갈아치우면 모드가 떨어진다. 되쓰기로 실행 비트를 유지한다
-awk 'NR==1{print "// 사용자가 고친 첫 줄"; next}1' .claude/scripts/hooks/pre-commit.js > t.js
-cat t.js > .claude/scripts/hooks/pre-commit.js && rm t.js
+awk 'NR==1{print "// 사용자가 고친 첫 줄"; next}1' .claude/scripts/hooks/pre-commit.py > t.py
+cat t.py > .claude/scripts/hooks/pre-commit.py && rm t.py
 BEFORE=$(tree_hash .claude)
 partial  gridfin deploy --from "$CONF"
 test "$(tree_hash .claude)" = "$BEFORE"        # .merged를 뺀 트리는 그대로다
-test -f .claude/scripts/hooks/pre-commit.js.merged   # 병합 결과는 옆에 나온다
+test -f .claude/scripts/hooks/pre-commit.py.merged   # 병합 결과는 옆에 나온다
 #      tree_hash 는 내용만 본다. 충돌한 파일의 실행 비트를 떨어뜨리는 구현이
 #      내용만 유지하면 통과해 버리므로 모드를 따로 본다. 30번은 성공 경로만 본다
-test -x .claude/scripts/hooks/pre-commit.js
+test -x .claude/scripts/hooks/pre-commit.py
 
 # ── 7. base를 못 꺼내면 덮지 않고 건너뛴다
 #      로컬 경로 clone은 --depth를 무시하므로 file:// 전송을 강제한다
@@ -115,28 +118,28 @@ T=$(fresh); cd "$T"
 SH=$(mktemp -d); git clone -q --depth 1 "file://$V2" "$SH/h"
 #      매니페스트의 source.path 를 없는 경로로 바꿔 되돌아갈 곳을 끊는다.
 #      끊지 않으면 본문의 조회 순서대로 원본 저장소에서 base를 찾아 시험이 헛돈다
-jq '.source.path = "/nonexistent"' .harness/manifest.json > t.json && mv t.json .harness/manifest.json
+jq '.source.path = "/nonexistent"' .harness/manifest.json > t.pyon && mv t.json .harness/manifest.json
 #      먼저 base 부재가 실제로 성립하는지 확인한다 — 이 확인이 없으면 시험이 헛돈다
 ! git -C "$SH/h" cat-file -e "$(jq -r '.files[0].sourceSha' .harness/manifest.json)^{commit}"
-BEFORE=$(tree_hash .claude); E=$(entry .harness/manifest.json .claude/scripts/hooks/pre-commit.js)
+BEFORE=$(tree_hash .claude); E=$(entry .harness/manifest.json .claude/scripts/hooks/pre-commit.py)
 partial  gridfin deploy --from "$SH/h"
 test "$(tree_hash .claude)" = "$BEFORE"
-test ! -e .claude/scripts/hooks/pre-commit.js.merged   # base 부재는 충돌이 아니다. 종료 코드 255를
+test ! -e .claude/scripts/hooks/pre-commit.py.merged   # base 부재는 충돌이 아니다. 종료 코드 255를
                                                        # 충돌로 읽는 구현이 여기서 걸린다
-test "$(entry .harness/manifest.json .claude/scripts/hooks/pre-commit.js)" = "$E"
+test "$(entry .harness/manifest.json .claude/scripts/hooks/pre-commit.py)" = "$E"
 
 # ── 8. 사라진 배포물은 사용자가 안 건드렸을 때만 지운다
 T=$(fresh); cd "$T"
-test -f .claude/scripts/hooks/format.js                       # v1에 있었다
-gridfin deploy --from "$RM"                                    # RM은 format.js를 뺀 하네스
-test ! -f .claude/scripts/hooks/format.js                      # 안 건드린 것은 지워진다
+test -f .claude/scripts/hooks/format.py                       # v1에 있었다
+gridfin deploy --from "$RM"                                    # RM은 format.py를 뺀 하네스
+test ! -f .claude/scripts/hooks/format.py                      # 안 건드린 것은 지워진다
 
 #      사용자가 고친 삭제 대상은 남는다 — installedHash를 안 보는 구현이 여기서 걸린다
 T=$(fresh); cd "$T"
-echo "// 내가 고쳤다" >> .claude/scripts/hooks/format.js
+echo "// 내가 고쳤다" >> .claude/scripts/hooks/format.py
 partial  gridfin deploy --from "$RM"
-test -f .claude/scripts/hooks/format.js
-grep -q '내가 고쳤다' .claude/scripts/hooks/format.js
+test -f .claude/scripts/hooks/format.py
+grep -q '내가 고쳤다' .claude/scripts/hooks/format.py
 
 # ── 9. 하네스가 dirty하면 거부하고 대상에 아무것도 쓰지 않는다
 T=$(fresh); cd "$T"
@@ -157,7 +160,7 @@ test -z "$(ls -A)"
 T=$(fresh); cd "$T"
 #      식별자가 쌍이므로 matcher와 command가 둘 다 같은 원소를 하나 더 넣어야 중복이 된다
 jq '.hooks.PreToolUse += [.hooks.PreToolUse[0]]' \
-   .claude/settings.json > t.json && mv t.json .claude/settings.json
+   .claude/settings.json > t.pyon && mv t.json .claude/settings.json
 jq -e '[.hooks.PreToolUse[] | [.matcher, .hooks[0].command]] as $k
        | ($k | length) != ($k | unique | length)' .claude/settings.json
 BEFORE=$(tree_hash .claude)
@@ -167,8 +170,8 @@ test "$(tree_hash .claude)" = "$BEFORE"
 # ── 12. sourceHash가 안 맞으면 그 파일을 건드리지 않는다
 #       대조를 아예 안 하는 구현을 걸러낸다
 T=$(fresh); cd "$T"
-jq '(.files[] | select(.dest==".claude/scripts/hooks/pre-commit.js") | .sourceHash) = "sha256:0000"' \
-   .harness/manifest.json > t.json && mv t.json .harness/manifest.json
+jq '(.files[] | select(.dest==".claude/scripts/hooks/pre-commit.py") | .sourceHash) = "sha256:0000"' \
+   .harness/manifest.json > t.pyon && mv t.json .harness/manifest.json
 BEFORE=$(tree_hash .claude)
 rejected gridfin deploy --from "$V2"
 test "$(tree_hash .claude)" = "$BEFORE"
@@ -176,26 +179,26 @@ test "$(tree_hash .claude)" = "$BEFORE"
 # ── 13. matcher가 없는 사건도 병합된다 — 이 계약을 때리는 시험이 따로 있어야 한다
 #       식별자를 /matcher 하나로 고정한 구현은 여기서만 걸린다
 T=$(fresh); cd "$T"
-jq '.hooks.SessionStart += [{"hooks":[{"type":"command","command":"node my-own.js"}]}]' \
-   .claude/settings.json > t.json && mv t.json .claude/settings.json
+jq '.hooks.SessionStart += [{"hooks":[{"type":"command","command":"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/my-own.py"}]}]' \
+   .claude/settings.json > t.pyon && mv t.json .claude/settings.json
 gridfin deploy --from "$V2"
-jq -e '[.hooks.SessionStart[].hooks[0].command] | index("node my-own.js")' .claude/settings.json
+jq -e '[.hooks.SessionStart[].hooks[0].command] | index("${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/my-own.py")' .claude/settings.json
 jq -e '[.hooks.SessionStart[].hooks[0].command] | map(select(test("session-start-v2"))) | length == 1' \
    .claude/settings.json                                   # 하네스 갱신이 반영된다
-jq -e '[.hooks.SessionStart[].hooks[0].command] | map(select(test("session-start.js"))) | length == 0' \
+jq -e '[.hooks.SessionStart[].hooks[0].command] | map(select(test("session-start.py"))) | length == 0' \
    .claude/settings.json                                   # 옛 원소가 남지 않는다
 
 # ── 14. 사용자가 안 건드린 파일은 새 버전으로 갱신된다 — ours==base면 theirs를 따른다
 T=$(fresh); cd "$T"
 gridfin deploy --from "$V2"
-git -C "$V2" show HEAD:payload/claude/scripts/hooks/pre-commit.js > want.js
-diff want.js .claude/scripts/hooks/pre-commit.js
+git -C "$V2" show HEAD:payload/claude/scripts/hooks/pre-commit.py > want.py
+diff want.py .claude/scripts/hooks/pre-commit.py
 
 # ── 15. JSON도 양쪽이 같은 자리를 다르게 고치면 충돌이다
 T=$(fresh); cd "$T"
 #      값 자리에서 충돌을 만든다. 원시 배열은 원소가 곧 식별자라 충돌이 생기지 않는다
-jq '.statusLine.command = "node my-status.js"' \
-   .claude/settings.json > t.json && mv t.json .claude/settings.json
+jq '.statusLine.command = "${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/my-status.py"' \
+   .claude/settings.json > t.pyon && mv t.json .claude/settings.json
 BEFORE=$(tree_hash .claude); E=$(entry .harness/manifest.json .claude/settings.json)
 partial  gridfin deploy --from "$CONFJ"
 test "$(tree_hash .claude)" = "$BEFORE"
@@ -219,11 +222,11 @@ grep -q '^\.harness/$' .git/info/exclude
 # ── 18. pointer 부재와 JSON null을 구별한다
 T=$(fresh); cd "$T"
 #      command를 같게 두고 matcher만 null과 부재로 가른다. 그래야 구별을 실제로 때린다
-jq '.hooks.SessionStart += [{"matcher":null,"hooks":[{"type":"command","command":"node same.js"}]},
-                            {"hooks":[{"type":"command","command":"node same.js"}]}]' \
-   .claude/settings.json > t.json && mv t.json .claude/settings.json
+jq '.hooks.SessionStart += [{"matcher":null,"hooks":[{"type":"command","command":"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/same.py"}]},
+                            {"hooks":[{"type":"command","command":"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/same.py"}]}]' \
+   .claude/settings.json > t.pyon && mv t.json .claude/settings.json
 gridfin deploy --from "$V2"
-jq -e '[.hooks.SessionStart[] | select(.hooks[0].command == "node same.js")] | length == 2' \
+jq -e '[.hooks.SessionStart[] | select(.hooks[0].command == "${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/same.py")] | length == 2' \
    .claude/settings.json
 #      null과 부재를 같게 다루면 두 원소가 같은 식별자가 되어 유일성 위반으로 거부되거나 하나로 합쳐진다
 
@@ -243,16 +246,16 @@ jq -e '.files[] | select(.merge=="json") | .owned
 # ── 20. 병합 뒤에는 installedHash가 sourceHash와 달라진다
 #       둘을 같게 기록하는 구현이 여기서 걸린다
 T=$(fresh); cd "$T"
-awk 'NR==2{print "// 사용자 줄"}1' .claude/scripts/hooks/pre-commit.js > t.js
-cat t.js > .claude/scripts/hooks/pre-commit.js && rm t.js   # mv 는 모드를 떨어뜨린다
+awk 'NR==2{print "// 사용자 줄"}1' .claude/scripts/hooks/pre-commit.py > t.py
+cat t.py > .claude/scripts/hooks/pre-commit.py && rm t.py   # mv 는 모드를 떨어뜨린다
 gridfin deploy --from "$V2"
-jq -e '.files[] | select(.dest==".claude/scripts/hooks/pre-commit.js")
+jq -e '.files[] | select(.dest==".claude/scripts/hooks/pre-commit.py")
        | .installedHash != .sourceHash' .harness/manifest.json
 
 # ── 21. 삭제된 배포물은 매니페스트 files에서도 빠진다
 T=$(fresh); cd "$T"
 gridfin deploy --from "$RM"
-jq -e '[.files[].dest] | index(".claude/scripts/hooks/format.js") == null' .harness/manifest.json
+jq -e '[.files[].dest] | index(".claude/scripts/hooks/format.py") == null' .harness/manifest.json
 
 # ── 22. 멱등성 — 같은 하네스로 세 번 배포해도 아무것도 안 바뀐다
 T=$(fresh); cd "$T"
@@ -264,45 +267,45 @@ test "$(tree_hash .claude)$(shasum -a 256 .harness/manifest.json | cut -d' ' -f1
 
 # ── 23. 연쇄 갱신 — V1 → V2 → V3에서 base가 매번 올바른 리비전에서 나온다
 T=$(fresh); cd "$T"
-awk 'NR==2{print "// 사용자 줄"}1' .claude/scripts/hooks/pre-commit.js > t.js
-cat t.js > .claude/scripts/hooks/pre-commit.js && rm t.js   # mv 는 모드를 떨어뜨린다
+awk 'NR==2{print "// 사용자 줄"}1' .claude/scripts/hooks/pre-commit.py > t.py
+cat t.py > .claude/scripts/hooks/pre-commit.py && rm t.py   # mv 는 모드를 떨어뜨린다
 gridfin deploy --from "$V2"
 gridfin deploy --from "$V3"
-grep -q '사용자 줄' .claude/scripts/hooks/pre-commit.js       # 두 번을 지나도 살아남는다
-git -C "$V3" show HEAD:payload/claude/scripts/hooks/pre-commit.js |
-  awk 'NR==2{print "// 사용자 줄"}1' > want.js
-diff want.js .claude/scripts/hooks/pre-commit.js
+grep -q '사용자 줄' .claude/scripts/hooks/pre-commit.py       # 두 번을 지나도 살아남는다
+git -C "$V3" show HEAD:payload/claude/scripts/hooks/pre-commit.py |
+  awk 'NR==2{print "// 사용자 줄"}1' > want.py
+diff want.py .claude/scripts/hooks/pre-commit.py
 
 # ── 24. 되돌림 — V2 배포 뒤 V1로 다시 배포해도 사용자 수정이 산다
 #       V1과 V2가 같은 저장소의 두 리비전인 경우다
 T=$(fresh); cd "$T"
-awk 'NR==2{print "// 사용자 줄"}1' .claude/scripts/hooks/pre-commit.js > t.js
-cat t.js > .claude/scripts/hooks/pre-commit.js && rm t.js   # mv 는 모드를 떨어뜨린다
+awk 'NR==2{print "// 사용자 줄"}1' .claude/scripts/hooks/pre-commit.py > t.py
+cat t.py > .claude/scripts/hooks/pre-commit.py && rm t.py   # mv 는 모드를 떨어뜨린다
 gridfin deploy --from "$V2"
 gridfin deploy --from "$V1"                                    # 리비전이 뒤로 간다
-grep -q '사용자 줄' .claude/scripts/hooks/pre-commit.js
-git -C "$V1" show HEAD:payload/claude/scripts/hooks/pre-commit.js |
-  awk 'NR==2{print "// 사용자 줄"}1' > want.js
-diff want.js .claude/scripts/hooks/pre-commit.js
+grep -q '사용자 줄' .claude/scripts/hooks/pre-commit.py
+git -C "$V1" show HEAD:payload/claude/scripts/hooks/pre-commit.py |
+  awk 'NR==2{print "// 사용자 줄"}1' > want.py
+diff want.py .claude/scripts/hooks/pre-commit.py
 
 # ── 25. 삭제 뒤 부활 — RM으로 지운 파일이 V1 재배포로 돌아온다
 T=$(fresh); cd "$T"
 gridfin deploy --from "$RM"
-test ! -f .claude/scripts/hooks/format.js
+test ! -f .claude/scripts/hooks/format.py
 gridfin deploy --from "$V1"
-test -f .claude/scripts/hooks/format.js
-jq -e '[.files[].dest] | index(".claude/scripts/hooks/format.js")' .harness/manifest.json
+test -f .claude/scripts/hooks/format.py
+jq -e '[.files[].dest] | index(".claude/scripts/hooks/format.py")' .harness/manifest.json
 
 # ── 26. 충돌 보고물은 다음 성공 배포가 치운다
 T=$(fresh); cd "$T"
 #      mv 로 갈아치우면 모드가 떨어진다. 되쓰기로 실행 비트를 유지한다
-awk 'NR==1{print "// 사용자가 고친 첫 줄"; next}1' .claude/scripts/hooks/pre-commit.js > t.js
-cat t.js > .claude/scripts/hooks/pre-commit.js && rm t.js
+awk 'NR==1{print "// 사용자가 고친 첫 줄"; next}1' .claude/scripts/hooks/pre-commit.py > t.py
+cat t.py > .claude/scripts/hooks/pre-commit.py && rm t.py
 partial  gridfin deploy --from "$CONF"
-test -f .claude/scripts/hooks/pre-commit.js.merged
-git -C "$CONF" show HEAD:payload/claude/scripts/hooks/pre-commit.js > .claude/scripts/hooks/pre-commit.js
+test -f .claude/scripts/hooks/pre-commit.py.merged
+git -C "$CONF" show HEAD:payload/claude/scripts/hooks/pre-commit.py > .claude/scripts/hooks/pre-commit.py
 gridfin deploy --from "$CONF"                                  # 사용자가 해결했으므로 성공한다
-test ! -e .claude/scripts/hooks/pre-commit.js.merged
+test ! -e .claude/scripts/hooks/pre-commit.py.merged
 
 # ── 27. dirty는 payload 안만 본다 — 세 종류를 각각 만든다
 T=$(fresh); cd "$T"
@@ -314,7 +317,7 @@ for kind in untracked staged modified; do
   case $kind in
     untracked) touch "$V2/payload/new.tmp" ;;
     staged)    touch "$V2/payload/new.tmp" && git -C "$V2" add payload/new.tmp ;;
-    modified)  echo "// 고침" >> "$V2/payload/claude/scripts/hooks/format.js" ;;
+    modified)  echo "// 고침" >> "$V2/payload/claude/scripts/hooks/format.py" ;;
   esac
   BEFORE="$(tree_hash .claude)$(tree_hash .harness)"
   rejected gridfin deploy --from "$V2"        # dirty를 만든 저장소와 배포 저장소가 같아야 한다
@@ -335,20 +338,20 @@ grep -q '^\.harness/$' "$(git rev-parse --git-common-dir)/info/exclude"
 
 # ── 29. dest가 심볼릭 링크면 건너뛰고 링크 바깥을 안 고친다
 T=$(fresh); cd "$T"
-OUT=$(mktemp -d); cp .claude/scripts/hooks/pre-commit.js "$OUT/real.js"
-BEFORE=$(shasum -a 256 "$OUT/real.js" | cut -d' ' -f1)
-ln -sf "$OUT/real.js" .claude/scripts/hooks/pre-commit.js
+OUT=$(mktemp -d); cp .claude/scripts/hooks/pre-commit.py "$OUT/real.py"
+BEFORE=$(shasum -a 256 "$OUT/real.py" | cut -d' ' -f1)
+ln -sf "$OUT/real.py" .claude/scripts/hooks/pre-commit.py
 partial  gridfin deploy --from "$V2"          # 심볼릭 링크는 파일별 건너뛰기다
-test "$(shasum -a 256 "$OUT/real.js" | cut -d' ' -f1)" = "$BEFORE"
-test -L .claude/scripts/hooks/pre-commit.js
+test "$(shasum -a 256 "$OUT/real.py" | cut -d' ' -f1)" = "$BEFORE"
+test -L .claude/scripts/hooks/pre-commit.py
 
 # ── 30. 실행 비트가 보존된다 — 배포 직후와 병합 뒤 둘 다
 T=$(fresh); cd "$T"
-test -x .claude/scripts/hooks/pre-commit.js
-awk 'NR==2{print "// 사용자 줄"}1' .claude/scripts/hooks/pre-commit.js > t.js
-cat t.js > .claude/scripts/hooks/pre-commit.js && rm t.js
+test -x .claude/scripts/hooks/pre-commit.py
+awk 'NR==2{print "// 사용자 줄"}1' .claude/scripts/hooks/pre-commit.py > t.py
+cat t.py > .claude/scripts/hooks/pre-commit.py && rm t.py
 gridfin deploy --from "$V2"
-test -x .claude/scripts/hooks/pre-commit.js
+test -x .claude/scripts/hooks/pre-commit.py
 
 # ── 31. 잠금 — 같은 대상에 둘이 동시에 배포하면 하나만 성공한다
 T=$(fresh); cd "$T"
@@ -363,20 +366,20 @@ test $(( (R1==0) + (R2==0) )) -eq 1                            # 하나만 성�
 test $(( (R1==2) + (R2==2) )) -eq 1                            # 나머지는 잠금 실패로 거부된다
 
 # ── 32. 공백과 유니코드가 든 파일 이름을 견딘다
-#       V1에 payload/claude/scripts/hooks/이름 있는 훅.js 를 넣은 하네스로 배포한다
+#       V1에 payload/claude/scripts/hooks/이름 있는 훅.py 를 넣은 하네스로 배포한다
 T=$(mktemp -d); cd "$T" && git init -q
 gridfin deploy --from "$V_SPACE"
-test -f ".claude/scripts/hooks/이름 있는 훅.js"
-jq -e '[.files[].dest] | index(".claude/scripts/hooks/이름 있는 훅.js")' .harness/manifest.json
+test -f ".claude/scripts/hooks/이름 있는 훅.py"
+jq -e '[.files[].dest] | index(".claude/scripts/hooks/이름 있는 훅.py")' .harness/manifest.json
 
 # ── 33. --json이 무엇이 되고 무엇이 안 됐는지 답한다
 T=$(fresh); cd "$T"
 #      mv 로 갈아치우면 모드가 떨어진다. 되쓰기로 실행 비트를 유지한다
-awk 'NR==1{print "// 사용자가 고친 첫 줄"; next}1' .claude/scripts/hooks/pre-commit.js > t.js
-cat t.js > .claude/scripts/hooks/pre-commit.js && rm t.js
+awk 'NR==1{print "// 사용자가 고친 첫 줄"; next}1' .claude/scripts/hooks/pre-commit.py > t.py
+cat t.py > .claude/scripts/hooks/pre-commit.py && rm t.py
 partial gridfin deploy --from "$CONF" --json > out.json
 jq -e '.outcome == "partial"' out.json
-jq -e '.files[] | select(.dest==".claude/scripts/hooks/pre-commit.js") | .status == "conflict"' out.json
+jq -e '.files[] | select(.dest==".claude/scripts/hooks/pre-commit.py") | .status == "conflict"' out.json
 jq -e '.files[] | select(.dest==".claude/settings.json") | .status | IN("updated","unchanged")' out.json
 
 # ── 34. 전체 거부는 reason을 담는다

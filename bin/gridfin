@@ -1,0 +1,20 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# ///
+"""gridfin — 하네스 배포 도구.
+
+T2에서 deploy 를 채운다. 지금은 뼈대만 있다.
+종료 코드는 셋이다 — 0 완전 성공 · 1 부분 실패 · 2 전체 거부.
+"""
+import sys
+
+def main(argv: list[str]) -> int:
+    if not argv:
+        print("gridfin <deploy> [옵션]", file=sys.stderr)
+        return 2
+    print(f"gridfin: '{argv[0]}' 은 아직 구현되지 않았다", file=sys.stderr)
+    return 2
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

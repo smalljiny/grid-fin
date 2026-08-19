@@ -3,7 +3,10 @@
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/session-start.js\"" }
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/session-start.py"
+          }
         ]
       }
     ],
@@ -11,16 +14,22 @@
       {
         "matcher": "Write",
         "hooks": [
-          { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/pre-commit.js\"" }
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/pre-commit.py"
+          }
         ]
       }
     ]
   },
   "permissions": {
-    "allow": ["Bash(git:*)", "Bash(gh:*)"]
+    "allow": [
+      "Bash(git:*)",
+      "Bash(gh:*)"
+    ]
   },
   "statusLine": {
     "type": "command",
-    "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/status.js\""
+    "command": "${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/status.py"
   }
 }

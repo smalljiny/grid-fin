@@ -35,40 +35,40 @@ branch() {  # $1=이름 $2=시작 브랜치
 save() { git -C "$1" add -A; git -C "$1" commit -qm "$2"; }
 
 # V2 — allow 추가·삭제 / PreToolUse에 matcher 하나 추가
-#      SessionStart의 command 변경 / pre-commit.js 끝에 한 줄
+#      SessionStart의 command 변경 / pre-commit.py 끝에 한 줄
 V2=$(branch v2 main)
 jq '.permissions.allow = (.permissions.allow - ["Bash(gh:*)"] + ["Bash(rg:*)"])
     | .hooks.PreToolUse += [{"matcher":"Edit",
-        "hooks":[{"type":"command","command":"node \"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/format.js\""}]}]
+        "hooks":[{"type":"command","command":"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/format.py"}]}]
     | .hooks.SessionStart[0].hooks[0].command =
-        "node \"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/session-start-v2.js\""' \
+        "${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/session-start-v2.py"' \
    "$V2/payload/claude/settings.json" > "$V2/t.json"
 mv "$V2/t.json" "$V2/payload/claude/settings.json"
-printf '// v2가 끝에 더한 줄\n' >> "$V2/payload/claude/scripts/hooks/pre-commit.js"
+printf '// v2가 끝에 더한 줄\n' >> "$V2/payload/claude/scripts/hooks/pre-commit.py"
 save "$V2" "v2"
 
-# V3 — v2에서 pre-commit.js 끝에 또 한 줄
+# V3 — v2에서 pre-commit.py 끝에 또 한 줄
 V3=$(branch v3 v2)
-printf '// v3가 끝에 더한 줄\n' >> "$V3/payload/claude/scripts/hooks/pre-commit.js"
+printf '// v3가 끝에 더한 줄\n' >> "$V3/payload/claude/scripts/hooks/pre-commit.py"
 save "$V3" "v3"
 
-# RM — v1에서 format.js 를 뺀다
+# RM — v1에서 format.py 를 뺀다
 RM=$(branch rm main)
-rm "$RM/payload/claude/scripts/hooks/format.js"
+rm "$RM/payload/claude/scripts/hooks/format.py"
 save "$RM" "rm"
 
-# CONF — v1에서 pre-commit.js 의 첫 줄을 고친다 (텍스트 충돌용)
+# CONF — v1에서 pre-commit.py 의 첫 줄을 고친다 (텍스트 충돌용)
 CONF=$(branch conf main)
 # awk 결과를 mv 로 갈아치우면 새 파일이라 모드가 기본값으로 떨어진다.
 # sed -i 는 제자리 수정이라 모드를 유지했는데 그 성질을 잃었다. 되쓰기로 유지한다.
-_f="$CONF/payload/claude/scripts/hooks/pre-commit.js"
-awk 'NR==1{print "// 하네스가 고친 첫 줄"; next}1' "$_f" > "$CONF/t.js"
-cat "$CONF/t.js" > "$_f" && rm "$CONF/t.js"
+_f="$CONF/payload/claude/scripts/hooks/pre-commit.py"
+awk 'NR==1{print "// 하네스가 고친 첫 줄"; next}1' "$_f" > "$CONF/t.py"
+cat "$CONF/t.py" > "$_f" && rm "$CONF/t.py"
 save "$CONF" "conf"
 
 # CONFJ — v1에서 statusLine.command 를 바꾼다 (값 자리 충돌용)
 CONFJ=$(branch confj main)
-jq '.statusLine.command = "node \"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/status-harness.js\""' \
+jq '.statusLine.command = "${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/status-harness.py"' \
    "$CONFJ/payload/claude/settings.json" > "$CONFJ/t.json"
 mv "$CONFJ/t.json" "$CONFJ/payload/claude/settings.json"
 save "$CONFJ" "confj"
@@ -76,8 +76,8 @@ save "$CONFJ" "confj"
 # V_SPACE — 공백과 유니코드가 든 파일 이름
 V_SPACE=$(branch v-space main)
 printf '// #2가 채운다 — 지금은 자리표시본\n// hook: 이름 있는 훅\nprocess.exit(0);\n' \
-  > "$V_SPACE/payload/claude/scripts/hooks/이름 있는 훅.js"
-chmod +x "$V_SPACE/payload/claude/scripts/hooks/이름 있는 훅.js"
+  > "$V_SPACE/payload/claude/scripts/hooks/이름 있는 훅.py"
+chmod +x "$V_SPACE/payload/claude/scripts/hooks/이름 있는 훅.py"
 save "$V_SPACE" "v-space"
 
 # V_ROOT — payload/root/ 에 파일이 생긴 경우
