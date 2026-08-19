@@ -172,7 +172,8 @@ def index_by_identity(arr, key, where: str, pointer: str) -> dict:
     if arr is MISSING:
         return {}
     if not isinstance(arr, list):
-        raise Rejected(f"{pointer} 가 {where} 에서 배열이 아니다")
+        # 전체 거부 목록에 없는 조건이다. 그 파일만의 문제이므로 충돌로 올린다.
+        raise Conflict()
     out = {}
     for el in arr:
         i = identity(el, key)
@@ -180,6 +181,32 @@ def index_by_identity(arr, key, where: str, pointer: str) -> dict:
             raise Rejected(f"{pointer} 의 식별자가 {where} 에서 유일하지 않다")
         out[i] = el
     return out
+
+
+def path_has_symlink(target: Path, dest: str) -> bool:
+    """dest 경로의 어느 구성 요소라도 링크인가. 대상이 아직 없어도 본다."""
+    cur = target
+    for part in dest.split("/"):
+        cur = cur / part
+        if cur.is_symlink():
+            return True
+    return False
+
+
+def check_owned(doc, owned: list, dest: str) -> None:
+    """식별자 유일성. 첫 배포에도 건다 — payload 자체가 중복을 담을 수 있다."""
+    for rule in owned:
+        v = ptr_get(doc, rule["pointer"])
+        if not isinstance(v, list):
+            continue
+        seen = set()
+        for el in v:
+            i = identity(el, rule.get("key"))
+            if i in seen:
+                # payload 자체가 중복을 담았다. 그 파일만의 문제가 아니라
+                # 하네스가 잘못된 것이므로 전체 거부다.
+                raise Rejected(f"duplicate_identifier — {dest} 의 {rule['pointer']}")
+            seen.add(i)
 
 
 def merge_json(base: dict, ours: dict, theirs: dict, owned: list) -> dict:
@@ -246,17 +273,18 @@ def deploy(target: Path, from_arg: str | None) -> int:
         if kind == "json":
             entry["owned"] = rule.get("owned", [])
 
-        if not live.exists():
-            plan.append({"dest": dest, "bytes": theirs, "mode": mode,
-                         "entry": entry, "status": "updated"})
-            continue
-
-        # 심볼릭 링크를 따라가면 저장소 밖의 파일을 고친다. T3 이 병합을 넣으면서
-        # 그 경로가 생겼으므로 여기서 막는다 — 계획은 T5 로 두었으나 위험을 만든 쪽이
-        # 막는 편이 맞다. 읽기만 하는 검사는 링크를 따라간다.
-        if live.is_symlink() or any(q.is_symlink() for q in live.parents if target in q.parents or q == target):
+        # 링크 검사를 먼저 한다. 대상이 아직 없어도 중간 경로가 링크이면
+        # 저장소 밖에 쓰게 된다 — 첫 배포가 그 경로로 샜다(실측).
+        if path_has_symlink(target, dest):
             plan.append({"dest": dest, "status": "skipped",
                          "detail": "경로에 심볼릭 링크가 있다", "entry": prev.get(dest)})
+            continue
+
+        if not live.exists():
+            if kind == "json":
+                check_owned(json.loads(theirs), rule.get("owned", []), dest)
+            plan.append({"dest": dest, "bytes": theirs, "mode": mode,
+                         "entry": entry, "status": "updated"})
             continue
 
         old = prev.get(dest)
@@ -291,9 +319,13 @@ def deploy(target: Path, from_arg: str | None) -> int:
             else:
                 out, conflicted = merge_text(live, base, theirs, tmp)
         except Conflict:
-            partial_doc = json.loads(cur)
+            # live 를 그대로 베끼면 해결 자료가 되지 않는다. 세 판을 함께 담아
+            # 사람이 무엇과 무엇이 갈렸는지 볼 수 있게 한다.
+            report = {"_충돌": f"{dest} — owned 자리에서 양쪽이 다르게 고쳤다",
+                      "_base": json.loads(base), "_대상": json.loads(cur),
+                      "_새버전": json.loads(theirs)}
             plan.append({"dest": dest, "status": "conflict", "entry": old,
-                         "merged": (json.dumps(partial_doc, ensure_ascii=False, indent=2) + "\n").encode()})
+                         "merged": (json.dumps(report, ensure_ascii=False, indent=2) + "\n").encode()})
             continue
 
         if conflicted:
@@ -325,7 +357,10 @@ def deploy(target: Path, from_arg: str | None) -> int:
             if m.exists():
                 m.unlink()          # 성공한 배포가 옛 충돌 보고물을 치운다
         elif p["status"] == "conflict":
-            Path(str(target / p["dest"]) + ".merged").write_bytes(p["merged"])
+            m = Path(str(target / p["dest"]) + ".merged")
+            if m.is_symlink():
+                m.unlink()          # 보고물 경로가 링크면 따라 쓰지 않는다
+            m.write_bytes(p["merged"])
 
     if not changed and not skipped:
         return OK                   # 보고물만 치웠다. 매니페스트는 그대로 둔다

@@ -60,7 +60,8 @@ t1() {
   T=$(fresh); cd "$T"
   jq -e . .harness/manifest.json > /dev/null
   jq -e . .claude/settings.json > /dev/null
-  jq -rj '.files[] | .dest, "\u0000"'   # 쉼표는 항목마다 붙는 구분자가 아니다 .harness/manifest.json | while IFS= read -r -d '' d; do test -f "$d"; done
+  # 쉼표는 항목마다 붙는 구분자가 아니다 — 파이프로 갈라야 항목마다 NUL 이 붙는다
+  jq -rj '.files[] | .dest, "\u0000"' .harness/manifest.json | while IFS= read -r -d '' d; do test -f "$d"; done
   jq -e '[.files[].dest] | index(".harness/manifest.json") == null' .harness/manifest.json
 }
 
