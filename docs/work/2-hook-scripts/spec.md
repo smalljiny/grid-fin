@@ -5,7 +5,7 @@ milestone: M0 기반 만들기
 label: hook
 정본: 이 이슈의 작업 스펙에 한해 이 파일 · 이슈 본문은 여기서 나오는 발행본이다. 미결 항목의 정본은 미결 목록 파일이다
 발행: 2026-08-20 · 이슈 #2
-bodyHash: sha256:1663bb7c3ccc429a231e8e48eac14924467ce3e257d8c9f4eabc05108a7a3e4d
+bodyHash: sha256:8b0f292da90d51710d2a16be27ab9b9e672e0fe02d82528793199e16b76de8d4
 최초 작성: 2026-08-20
 최종 수정: 2026-08-20
 ---
@@ -81,11 +81,30 @@ GRIDFIN_GATE {"ok":false,"missing":[{"kind":"hook_declaration","path":".claude/s
 |---|---|
 | 토큰 | 게이트 판정은 `GRIDFIN_GATE`, 포맷 보고는 `GRIDFIN_FORMAT` |
 | `ok` | 참·거짓 |
-| `missing[].kind` | **이 이슈가 정하는 값 3개** — `manifest`(매니페스트가 없다) · `hook_declaration`(매니페스트에 있는데 선언에 없다) · `hook_file`(선언이 가리키는 파일이 없다). **목록은 닫혀 있지 않다** — 이슈 #3이 선언된 검사 도구의 미설치를 `tool_missing`으로 더한다. **읽는 쪽은 모르는 `kind`를 만나도 결손으로 센다** |
+| `missing[].kind` | **이 이슈가 내는 값 8개**(아래 표). **목록은 닫혀 있지 않다** — 이슈 #3이 선언된 검사 도구의 미설치를 `tool_missing`으로 더한다. **읽는 쪽은 모르는 `kind`를 만나도 결손으로 센다** |
 | `missing[].path` | 대상 저장소 루트 기준의 상대 경로 |
 | `changed` | `GRIDFIN_FORMAT`에서 고쳐 쓴 파일의 경로 목록 |
 
+**`kind` 8개.** 처음에는 3개로 적었는데 **구현하며 늘었다**(T2, 2026-08-20).
+
+| `kind` | 뜻 | 복구 |
+|---|---|---|
+| `manifest` | 매니페스트가 없다 | 재배포 |
+| `manifest_unreadable` | 매니페스트를 읽을 수 없다 | 고친다 |
+| `settings` | 설정 파일이 없다 | 재배포 |
+| `settings_unreadable` | 설정 파일을 읽을 수 없다 | 고친다 |
+| `hook_declaration` | 매니페스트에 있는데 선언에 없다 | 재배포 |
+| `hook_file` | 선언이 가리키는 파일이 없다 | 재배포 |
+| `project_root` | 루트를 알아낼 수 없다 | 루트에서 세션을 연다 |
+| `hook_error` | 훅이 예상 밖 예외로 끝났다 | 원인을 본다 |
+
+**없는 것과 읽을 수 없는 것을 가르는 이유는 복구가 다르기 때문이다.** 없으면 재배포가 답이고, 깨졌으면 고치는 것이 답이다. **하나로 묶으면 부르는 쪽이 무엇을 할지 정할 수 없다.**
+
+**`hook_error`가 있는 이유.** 「어느 경우에도 종료 코드 2를 내지 않는다」는 **열거로 보장되지 않는다.** 바깥에서 모든 예외를 잡아 0으로 끝내는 경로를 하나로 두되, **조용히 지나가지 않게** 예외를 결손으로 싣는다. 삼키면 결손이 있는데 통과한 것으로 보인다.
+
 **같은 형식을 세 곳이 함께 쓴다.** 세션 시작은 `additionalContext`에, 차단하는 두 훅은 stderr에, 포맷 훅은 `additionalContext`에 싣는다. **판정하는 곳이 셋인데 형식이 하나이므로 시험이 하나의 파서로 셋을 다 읽는다.**
+
+**훅은 배포된 트리에 파일을 만들지 않는다.** 공용 모듈을 가져다 쓰면 Python이 `__pycache__`를 만드는데, **매니페스트에 없는 파일이 배포물 옆에 쌓이면 배포물 확인이 대조할 대상과 실제가 갈린다.** 그리고 그것이 `payload/`로 새어 들어가면 **이진 파일이라 3-way merge가 실패해 배포가 통째로 거부된다**(1차 실측 2026-08-20 — 이슈 #1의 시험 31개가 그것으로 깨졌다). 공용 모듈을 가져오기 전에 바이트코드 쓰기를 끈다.
 
 **예외가 나면 차단 훅은 막고 비차단 훅은 통과시킨다.** stdin이 JSON이 아니거나 스크립트가 예외로 끝나는 경우다. 차단 훅이 예외에서 통과하면 검사하지 않은 것이 통과한 것으로 보이고, 그것이 fail-open이다.
 
@@ -301,7 +320,7 @@ PreToolUse    →  같은 확인을 다시 수행한다  →  결손이면 종�
 |---|---|
 | `payload/claude/scripts/hooks/session-start.py` | 자리표시본을 채운다 |
 | `payload/claude/scripts/hooks/pre-write.py` | 새로 만든다 |
-| `payload/claude/scripts/gridfin/gate.py` | 새로 만든다. **훅이 아니라 훅이 함께 쓰는 코드다**(§3.3) |
+| `payload/claude/scripts/gridfin/gate.py` | 새로 만든다. **훅이 아니라 훅이 함께 쓰는 코드다**(§3.3). 훅 3개가 가져다 쓴다 — `format.py`는 차단하지 않으므로 쓰지 않는다 |
 | `payload/claude/scripts/hooks/pre-commit.py` | 자리표시본을 채운다 |
 | `payload/claude/scripts/hooks/format.py` | 자리표시본을 채운다 |
 | `payload/claude/settings.json` | 훅 선언 4개로 고친다 |
