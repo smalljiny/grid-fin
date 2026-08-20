@@ -670,6 +670,41 @@ t45() {
   test -z "$(git status --porcelain -- gridfin.json)"            # 배포한 것은 숨는다
 }
 
+t46_desc="계산을 마친 뒤의 전체 거부도 파일 목록을 안 싣는다"
+t46() {
+  #      34는 하네스 dirty 를 쓰는데 그것은 계산 전에 걸러진다. 계산이 끝난 뒤의
+  #      거부는 목록이 이미 채워져 있어, 비우는 줄을 지워도 34가 통과했다(변이로 실측)
+  T=$(fresh); cd "$T"
+  jq '(.files[] | select(.dest==".claude/scripts/hooks/pre-commit.py") | .sourceHash) = "sha256:0000"' \
+     .harness/manifest.json > t.json && cat t.json > .harness/manifest.json && rm t.json
+  rejected gridfin deploy --from "$V2" --json > out.json
+  jq -e '.outcome == "rejected" and .reason == "source_hash_mismatch"' out.json
+  jq -e '.files | length == 0' out.json
+
+  #      sourceHash 도 목록을 채우기 전에 난다. 채운 뒤에 나는 거부는 무시 목록
+  #      실패뿐이고, 그것만이 「비우는 줄」을 실제로 때린다(변이로 실측)
+  T=$(mk); cd "$T" && git init -q
+  chmod 444 .git/info/exclude
+  rejected gridfin deploy --from "$V1" --json > out.json
+  chmod 644 .git/info/exclude
+  jq -e '.outcome == "rejected" and .reason == "exclude_write_failed"' out.json
+  jq -e '.files | length == 0' out.json
+}
+
+t47_desc="--json 없이는 표준 출력이 비어 있다"
+t47() {
+  #      사람이 읽는 줄이 표준 출력으로 새면 그것을 파이프로 받는 쪽이 깨진다.
+  #      계약은 --json 하나뿐이다
+  T=$(fresh); cd "$T"
+  test -z "$(gridfin deploy --from "$V2" 2>/dev/null)"            # 성공
+  echo "// 내가 고쳤다" >> .claude/scripts/hooks/format.py
+  test -z "$(gridfin deploy --from "$RM" 2>/dev/null || true)"    # 부분 실패
+  T=$(fresh); cd "$T"
+  touch "$V2/payload/dirty.tmp"
+  test -z "$(gridfin deploy --from "$V2" 2>/dev/null || true)"    # 전체 거부
+  rm "$V2/payload/dirty.tmp"
+}
+
 # ── 실행기 ────────────────────────────────────────────────
 # 시험마다 함수로 나눈 이유가 있다. set -e 가 걸린 한 덩어리로 두면 첫 실패에서
 # 멈춰 어느 시험이 통과했는지 알 수 없다. 단계적 구현에서는 대부분의 시험이
@@ -678,7 +713,7 @@ t45() {
 #   bash tests/verify-deploy.sh          전부
 #   bash tests/verify-deploy.sh 1 2 19   고른 것만
 
-ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45"
+ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47"
 
 restore_fixtures() {
   # 앞 시험이 fixture 를 더럽힌 채 실패해도 다음 시험이 영향받지 않게 되돌린다.
