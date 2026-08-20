@@ -14,6 +14,10 @@
 import pathlib
 import sys
 
+# 배포된 트리에 __pycache__ 를 만들지 않는다. 만들면 매니페스트에 없는 파일이
+# 배포물 옆에 쌓이고, payload/ 로 새어 들어가면 이진 파일이라 3-way merge 가
+# 실패한다(1차 실측 2026-08-20 — 이슈 #1의 시험 31개가 그것으로 깨졌다).
+sys.dont_write_bytecode = True
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "gridfin"))
 import gate  # noqa: E402
 
