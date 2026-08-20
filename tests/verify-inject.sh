@@ -130,8 +130,27 @@ c33() {
   test -f "$W/.claude/scripts/gridfin/gate.py"
 }
 
-c34_desc="C34 주입 뒤 워크트리에서 pre-write.py 를 부르면 등록 확인이 통과한다"
+c34_desc="C34 디렉터리 심볼릭 링크를 만들지 않는다"
 c34() {
+  M=$(main_repo); W=$(worktree_of "$M")
+  inject "$W" > /dev/null
+  #      넣은 것 중 어느 것도 링크가 아니다. 디렉터리든 파일이든 실물이어야 한다.
+  #      워크트리의 .claude 가 메인을 가리키면 워크트리에서 고친 것이 메인의
+  #      훅을 바꾼다 — 그것이 관측된 사고다
+  for d in .claude .claude/scripts .claude/scripts/hooks .claude/scripts/gridfin .harness; do
+    test ! -L "$W/$d"
+  done
+  while IFS= read -r f; do
+    test ! -L "$W/$f" || { printf '링크다: %s\n' "$f"; return 1; }
+  done < <(jq -r '.files[].dest' "$M/.harness/manifest.json")
+  #      실물이라 워크트리에서 고쳐도 메인이 안 바뀐다
+  before=$(shasum -a 256 < "$M/.claude/scripts/hooks/session-start.py")
+  printf '# 워크트리에서 고친 줄\n' >> "$W/.claude/scripts/hooks/session-start.py"
+  test "$(shasum -a 256 < "$M/.claude/scripts/hooks/session-start.py")" = "$before"
+}
+
+c38_desc="C38 주입 뒤 워크트리에서 pre-write.py 를 부르면 등록 확인이 통과한다"
+c38() {
   M=$(main_repo); W=$(worktree_of "$M")
   inject "$W" > /dev/null
   in="$GRIDFIN_RUN/pw.json"
@@ -235,7 +254,7 @@ c37() {
 }
 
 # ── 실행기 ────────────────────────────────────────────────
-ALL="29 30 31 32 33 34 35 36 37"
+ALL="29 30 31 32 33 34 35 36 37 38"
 
 pass=0; fail=0
 for n in ${*:-$ALL}; do
