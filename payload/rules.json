@@ -7,6 +7,13 @@
         "key": null
       },
       {
+        "pointer": "/hooks/SessionStart",
+        "key": [
+          "/matcher",
+          "/hooks/0/command"
+        ]
+      },
+      {
         "pointer": "/hooks/PreToolUse",
         "key": [
           "/matcher",
@@ -14,7 +21,7 @@
         ]
       },
       {
-        "pointer": "/hooks/SessionStart",
+        "pointer": "/hooks/PostToolUse",
         "key": [
           "/matcher",
           "/hooks/0/command"
