@@ -32,21 +32,24 @@ MAPPING = {"claude": ".claude", "root": ""}
 OUT: dict = {"json": False, "files": []}
 
 
-def emit(outcome: str, reason: str | None) -> None:
+def emit(outcome: str, reason: str | None, files: list) -> None:
+    """목록을 인자로 받는다. 전역에서 읽으면 「아직 안 쓴 계획」이 결과처럼 샌다."""
     if not OUT["json"]:
         return
     doc: dict = {"outcome": outcome}
     if reason:
         doc["reason"] = reason
-    doc["files"] = OUT["files"]
+    doc["files"] = files
     print(json.dumps(doc, ensure_ascii=False, indent=2))
 
 
 def die(code: str | None, detail: str) -> int:
-    """전체 거부. 한 번만 낸다 — 여기서 내고 부르는 쪽은 코드만 돌려준다."""
+    """전체 거부. 한 번만 낸다 — 여기서 내고 부르는 쪽은 코드만 돌려준다.
+
+    목록은 언제나 비운다. 아무것도 쓰지 않았으므로 보고할 파일이 없다.
+    """
     print(f"거부: {code + ' — ' if code else ''}{detail}", file=sys.stderr)
-    OUT["files"] = []           # 전체 거부는 아무것도 안 했으므로 목록이 없다
-    emit("rejected", code)
+    emit("rejected", code, [])
     return REJECTED
 
 
@@ -612,7 +615,7 @@ def main(argv: list[str]) -> int:
         err = (e.stderr or b"").decode(errors="replace").strip()
         return die(None, f"git 이 실패했다 — {' '.join(e.cmd[:4])}\n{err}")
     if rc != REJECTED:              # 거부는 die 가 이미 냈다. 두 번 내면 안 된다
-        emit("partial" if rc == PARTIAL else "success", None)
+        emit("partial" if rc == PARTIAL else "success", None, OUT["files"])
     return rc
 
 
