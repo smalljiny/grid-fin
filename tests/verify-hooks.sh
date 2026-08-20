@@ -318,9 +318,13 @@ c9() {
   printf 'raise RuntimeError("일부러 낸 예외")\n' >> "$T5/.claude/scripts/gridfin/gate.py"
   run_session_start "$T5" > /dev/null; test "$(hook_rc)" != 2
 
-  #      ⓖ 공용 모듈 자체가 없다 — import 가 실패한다
+  #      ⓖ 공용 모듈 자체가 없다 — import 가 실패한다.
+  #      막지는 못하되 조용히 죽지도 않는다. 아무 말 없이 종료 코드 1로 끝나면
+  #      「검사가 통과했다」와 구별되지 않는다
   T6=$(deployed); rm "$T6/.claude/scripts/gridfin/gate.py"
-  run_session_start "$T6" > /dev/null; test "$(hook_rc)" != 2
+  g=$(run_session_start "$T6" | gate_json)
+  test "$(hook_rc)" = 0
+  printf '%s' "$g" | jq -e '.ok == false and ([.missing[].kind] | index("hook_error") != null)' > /dev/null
 
   #      ⓗ 예외가 나도 조용히 지나가지 않는다. 결손으로 실려 나온다
   T7=$(deployed)
@@ -373,8 +377,109 @@ c17() {
   done
 }
 
+# ── 6.3 쓰기 경계 ──────────────────────────────────────────
+
+# PreToolUse 훅을 부른다. 실측한 필드 그대로다 — tool_input 에 file_path 와 content 다.
+run_hook() {  # $1=대상 $2=훅 이름 $3=stdin 내용
+  in="$GRIDFIN_RUN/hook.json"
+  printf '%s' "$3" > "$in"
+  rc=0
+  ( cd "$1" && CLAUDE_PROJECT_DIR="$1" "$1/.claude/scripts/hooks/$2.py" ) \
+    < "$in" > "$GRIDFIN_RUN/hook.out" 2>"$GRIDFIN_RUN/hook.err" || rc=$?
+  printf '%s' "$rc" > "$GRIDFIN_RUN/ss.rc"
+  cat "$GRIDFIN_RUN/hook.out"
+}
+hook_err() { cat "$GRIDFIN_RUN/hook.err"; }
+
+pre_write_in() {  # $1=file_path
+  printf '{"session_id":"t","cwd":"%s","hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"%s","content":"x"}}' "$2" "$1"
+}
+
+c10_desc="C10 루트 밖 경로면 종료 코드 2로 끝나고 stderr 에 GRIDFIN_GATE 줄을 낸다"
+c10() {
+  T=$(deployed); O=$(mk)
+  run_hook "$T" pre-write "$(pre_write_in "$O/victim.txt" "$T")" > /dev/null
+  test "$(hook_rc)" = 2
+  hook_err | grep -q GRIDFIN_GATE
+  hook_err | sed -n 's/^.*GRIDFIN_GATE //p' | head -1 | jq -e '.ok == false' > /dev/null
+  #      상대 경로로 빠져나가는 것도 막는다
+  run_hook "$T" pre-write "$(pre_write_in "$T/../victim.txt" "$T")" > /dev/null
+  test "$(hook_rc)" = 2
+}
+
+c11_desc="C11 루트 안의 심볼릭 링크가 밖을 가리켜도 차단한다"
+c11() {
+  T=$(deployed); O=$(mk); mkdir -p "$O/real"
+  ln -s "$O/real" "$T/link"
+  run_hook "$T" pre-write "$(pre_write_in "$T/link/victim.txt" "$T")" > /dev/null
+  test "$(hook_rc)" = 2
+  #      부모가 링크인 경우만이 아니라 대상 자신이 링크인 경우도 본다
+  printf 'x\n' > "$O/target.txt"
+  ln -s "$O/target.txt" "$T/direct.txt"
+  run_hook "$T" pre-write "$(pre_write_in "$T/direct.txt" "$T")" > /dev/null
+  test "$(hook_rc)" = 2
+}
+
+c12_desc="C12 등록이 온전하고 매니페스트가 있으면 루트 안 경로는 통과한다"
+c12() {
+  T=$(deployed)
+  run_hook "$T" pre-write "$(pre_write_in "$T/docs/새 파일.md" "$T")" > /dev/null
+  test "$(hook_rc)" = 0
+  #      아직 없는 하위 디렉터리 안이어도 통과한다 — 쓰기 직전이라 부모가 없을 수 있다
+  run_hook "$T" pre-write "$(pre_write_in "$T/a/b/c.txt" "$T")" > /dev/null
+  test "$(hook_rc)" = 0
+  #      검사가 살아 있다. 없으면 언제나 0을 내는 구현이 통과한다
+  run_hook "$T" pre-write "$(pre_write_in "/tmp/victim.txt" "$T")" > /dev/null
+  test "$(hook_rc)" = 2
+}
+
+c13_desc="C13 훅 등록이 불완전하면 루트 안 경로도 차단한다"
+c13() {
+  T=$(deployed)
+  jq 'del(.hooks.PostToolUse)' "$T/.claude/settings.json" > "$T/t.json"
+  mv "$T/t.json" "$T/.claude/settings.json"
+  run_hook "$T" pre-write "$(pre_write_in "$T/ok.txt" "$T")" > /dev/null
+  test "$(hook_rc)" = 2
+  hook_err | sed -n 's/^.*GRIDFIN_GATE //p' | head -1 |
+    jq -e '[.missing[].kind] | index("hook_declaration") != null' > /dev/null
+}
+
+c14_desc="C14 매니페스트가 없으면 루트 안 경로도 차단한다"
+c14() {
+  T=$(deployed); rm "$T/.harness/manifest.json"
+  run_hook "$T" pre-write "$(pre_write_in "$T/ok.txt" "$T")" > /dev/null
+  test "$(hook_rc)" = 2
+  hook_err | sed -n 's/^.*GRIDFIN_GATE //p' | head -1 |
+    jq -e '[.missing[].kind] | index("manifest") != null' > /dev/null
+}
+
+c15_desc="C15 stdin 이 JSON 이 아니면 차단한다 — 차단 훅은 예외에서 막는다"
+c15() {
+  T=$(deployed)
+  run_hook "$T" pre-write 'not json' > /dev/null
+  test "$(hook_rc)" = 2
+  #      JSON 이되 필요한 필드가 없는 경우도 막는다
+  run_hook "$T" pre-write '{"hook_event_name":"PreToolUse"}' > /dev/null
+  test "$(hook_rc)" = 2
+  #      루트는 알아냈는데 file_path 만 없는 경우를 따로 본다.
+  #      앞 줄은 cwd 도 없어 등록 확인에서 먼저 막히므로 이 갈래를 재지 못한다
+  run_hook "$T" pre-write "{\"hook_event_name\":\"PreToolUse\",\"cwd\":\"$T\",\"tool_input\":{}}" > /dev/null
+  test "$(hook_rc)" = 2
+  hook_err | sed -n 's/^.*GRIDFIN_GATE //p' | head -1 |
+    jq -e '[.missing[].kind] | index("hook_input") != null' > /dev/null
+  #      공용 모듈이 예외를 던져도 막는다. 열거하지 않은 경우다
+  T2=$(deployed)
+  printf 'raise RuntimeError("일부러")\n' >> "$T2/.claude/scripts/gridfin/gate.py"
+  run_hook "$T2" pre-write "$(pre_write_in "$T2/ok.txt" "$T2")" > /dev/null
+  test "$(hook_rc)" = 2
+  #      공용 모듈이 아예 없어도 막는다
+  T3=$(deployed); rm "$T3/.claude/scripts/gridfin/gate.py"
+  run_hook "$T3" pre-write "$(pre_write_in "$T3/ok.txt" "$T3")" > /dev/null
+  test "$(hook_rc)" = 2
+}
+
 # ── 실행기 ────────────────────────────────────────────────
-ALL="1 2 3 4 5 6 7 8 9 16 17"
+ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17"
 
 pass=0; fail=0
 for n in ${*:-$ALL}; do

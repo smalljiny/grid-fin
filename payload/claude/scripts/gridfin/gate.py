@@ -165,10 +165,45 @@ def additional_context(event: str, text: str) -> str:
     )
 
 
+def inside_root(target: str, root: pathlib.Path) -> bool:
+    """대상 경로가 프로젝트 루트 안인가.
+
+    **심볼릭 링크를 따라간 뒤에 비교한다.** 루트 안의 링크가 밖을 가리키면
+    경로 문자열만으로는 안에 있는 것으로 보인다.
+
+    **쓰기 직전이라 대상이 아직 없어도 성립한다.** `Path.resolve()` 는 없는
+    경로에도 동작하고, 존재하는 앞부분의 링크는 풀어 준다. 없는 조상을 직접
+    되짚는 코드를 두었다가 변이 검사에서 아무 시험에도 안 걸려 지웠다 —
+    `resolve()` 가 이미 하는 일이었다.
+    """
+    if not target:
+        return False
+    path = pathlib.Path(target)
+    if not path.is_absolute():
+        path = root / path
+    try:
+        resolved = path.resolve()
+    except OSError:
+        return False
+    try:
+        resolved.relative_to(root)
+    except ValueError:
+        return False
+    return True
+
+
+def blocked(event: str, result: dict) -> str:
+    """차단하는 훅이 stderr 에 내는 것. 종료 코드 2와 함께 쓴다."""
+    return "%s\n%s\n" % (describe(result), gate_line(result))
+
+
 def describe(result: dict) -> str:
     """사람이 읽는 한 줄. 계약이 아니다 — 판정은 언제나 GRIDFIN_GATE 줄로 한다."""
     if result.get("ok"):
         return "훅 등록 확인 통과."
     items = ", ".join(
         "%s(%s)" % (m.get("path") or "-", m.get("kind")) for m in result.get("missing", []))
-    return "훅 등록 확인 실패 — %s. `gridfin deploy` 를 다시 실행한다." % items
+    kinds = {m.get("kind") for m in result.get("missing", [])}
+    if kinds == {"outside_root"}:
+        return "프로젝트 루트 밖에는 쓰지 않는다 — %s." % items
+    return "게이트가 막았다 — %s. `gridfin deploy` 를 다시 실행한다." % items

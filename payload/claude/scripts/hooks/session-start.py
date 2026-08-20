@@ -11,6 +11,7 @@
 **그래서 여기서는 알리기만 하고 실제 차단은 쓰기 경계와 커밋 경계가 한다.**
 알리는 채널은 종료 코드 0 + stdout JSON 의 additionalContext 다 — 도달을 실측했다.
 """
+import json
 import pathlib
 import sys
 
@@ -18,8 +19,24 @@ import sys
 # 배포물 옆에 쌓이고, payload/ 로 새어 들어가면 이진 파일이라 3-way merge 가
 # 실패한다(1차 실측 2026-08-20 — 이슈 #1의 시험 31개가 그것으로 깨졌다).
 sys.dont_write_bytecode = True
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "gridfin"))
-import gate  # noqa: E402
+
+# **import 자체를 감싼다.** 공용 모듈이 없거나 깨지면 여기서 죽는데,
+# 그러면 파이썬이 종료 코드 1로 끝내고 **아무 말도 남지 않는다.**
+# 여기서는 막지 못하므로 알리고 0으로 끝낸다 — 차단은 쓰기 경계가 한다.
+try:
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "gridfin"))
+    import gate  # noqa: E402
+except BaseException as _exc:  # noqa: BLE001
+    _fail = {"ok": False,
+             "missing": [{"kind": "hook_error",
+                          "path": "%s: %s" % (type(_exc).__name__, _exc)}]}
+    sys.stdout.write(json.dumps(
+        {"hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": "공용 모듈을 부를 수 없다.\nGRIDFIN_GATE "
+                                 + json.dumps(_fail, ensure_ascii=False, sort_keys=True)}},
+        ensure_ascii=False))
+    sys.exit(0)
 
 EVENT = "SessionStart"
 
