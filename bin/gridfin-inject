@@ -1,0 +1,171 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# ///
+"""워크트리에 하네스를 넣는다.
+
+**배포물이 아니라 하네스 도구다.** 설계 §7-4의 배포 단위 8가지에 없다. 그래서
+`payload/` 가 아니라 `bin/` 에 있고, `bin/gridfin` 을 고치지 않는다.
+
+**왜 필요한가.** 배포물을 git 으로 추적하지 않기로 한 순간부터(미결 목록 파일의
+S26) 커밋이 워크트리를 덮어 주지 않는다. 워크트리를 만든 뒤 넣는 주체가 있어야
+그곳에서도 게이트가 산다.
+
+**복사한다. 디렉터리 심볼릭 링크를 만들지 않는다.** 워크트리의 `.claude` 가 메인을
+가리킬 때 **메인의 훅이 바뀌는 것이 관측됐다**(S27, 1차 실측 2026-08-19).
+복사하면 워크트리에서 고친 것이 워크트리와 함께 사라진다.
+
+**대가.** 메인의 하네스를 갱신해도 살아 있는 워크트리는 옛 버전을 쓴다.
+매니페스트를 함께 넣으므로 리비전 차이는 보인다.
+
+**무시 목록을 쓰지 않는다. 확인만 한다.** 배포가 심은 블록이 워크트리를 이미
+덮는다(미결 목록 파일의 S35, 1차 실측 2026-08-20). **쓰는 주체를 둘로 만들면
+어느 쪽이 옳은지 겨루게 된다.**
+
+종료 코드 — 0 완전 성공 · 1 부분 실패 · 2 전체 거부.
+"""
+import json
+import pathlib
+import shutil
+import subprocess
+import sys
+
+MANIFEST = ".harness/manifest.json"
+
+
+class Rejected(Exception):
+    """입력이 잘못됐다. 아무것도 쓰지 않는다."""
+
+
+def git(cwd: pathlib.Path, *args: str) -> str:
+    out = subprocess.run(["git", "-C", str(cwd), *args],
+                         capture_output=True, check=True)
+    return out.stdout.decode().strip()
+
+
+def resolve_worktree(raw: str) -> tuple[pathlib.Path, pathlib.Path]:
+    """대상이 워크트리인지 가르고 (워크트리 루트, 메인 루트) 를 돌려준다.
+
+    **`test -d .git` 으로 판정하지 않는다** — 워크트리의 `.git` 은 파일이다(S27).
+    가르는 값은 `--git-dir` 와 `--git-common-dir` 의 차이다(1차 실측 2026-08-20).
+    """
+    target = pathlib.Path(raw).resolve()
+    if not target.is_dir():
+        raise Rejected("대상이 디렉터리가 아니다: %s" % target)
+    try:
+        git_dir = pathlib.Path(git(target, "rev-parse", "--absolute-git-dir"))
+        common = pathlib.Path(git(target, "rev-parse", "--path-format=absolute",
+                                  "--git-common-dir"))
+        root = pathlib.Path(git(target, "rev-parse", "--show-toplevel"))
+    except subprocess.CalledProcessError:
+        raise Rejected("git 저장소가 아니다: %s" % target) from None
+
+    if git_dir == common:
+        raise Rejected("워크트리가 아니라 메인이다: %s" % root)
+
+    # 메인 워크트리는 `git worktree list` 의 첫 줄이다
+    first = git(target, "worktree", "list", "--porcelain").splitlines()[0]
+    if not first.startswith("worktree "):
+        raise Rejected("메인 워크트리를 찾지 못했다")
+    return root, pathlib.Path(first[len("worktree "):]).resolve()
+
+
+def read_manifest(main: pathlib.Path) -> dict:
+    path = main / MANIFEST
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise Rejected("메인에 매니페스트가 없다: %s" % path) from None
+    except Exception as exc:
+        raise Rejected("매니페스트를 읽을 수 없다: %s" % exc) from None
+    if not isinstance(data.get("files"), list):
+        raise Rejected("매니페스트에 files 배열이 없다")
+    return data
+
+
+def entries(manifest: dict, main: pathlib.Path) -> list[str]:
+    """넣을 목록. **매니페스트 자신을 규칙으로 하나 더 넣는다.**
+
+    `files` 는 자기 자신을 담지 않는다 — 자기 해시를 자기 안에 담을 수 없기
+    때문이다(S27). 넣지 않으면 워크트리의 훅이 기대 목록을 만들지 못해
+    등록 확인이 매번 결손으로 떨어진다.
+    """
+    out = []
+    for item in manifest["files"]:
+        dest = item.get("dest") or ""
+        if not dest:
+            raise Rejected("매니페스트 항목에 dest 가 없다")
+        target = (main / dest).resolve()
+        try:
+            target.relative_to(main)
+        except ValueError:
+            raise Rejected("매니페스트의 dest 가 저장소 밖을 가리킨다: %s" % dest) from None
+        out.append(dest)
+    out.append(MANIFEST)
+    return out
+
+
+def tracked(worktree: pathlib.Path, dest: str) -> bool:
+    result = subprocess.run(
+        ["git", "-C", str(worktree), "ls-files", "--error-unmatch", "--", dest],
+        capture_output=True)
+    return result.returncode == 0
+
+
+def put(main: pathlib.Path, worktree: pathlib.Path, dest: str) -> str | None:
+    """항목 하나를 넣는다. 실패하면 이유를 돌려준다."""
+    src = main / dest
+    dst = worktree / dest
+    if not src.is_file():
+        return "메인에 없다"
+    if tracked(worktree, dest):
+        # 추적되는 파일을 덮으면 사용자의 커밋된 파일이 바뀐다
+        return None
+    try:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)          # 실행 비트와 시각을 보존한다
+    except OSError as exc:
+        return str(exc)
+    return None
+
+
+def ignored(worktree: pathlib.Path, dests: list[str]) -> list[str]:
+    """무시되지 않는 항목을 돌려준다. **쓰지 않고 확인만 한다.**"""
+    dirty = set()
+    for line in git(worktree, "status", "--porcelain", "--untracked-files=all").splitlines():
+        dirty.add(line[3:].strip().strip('"'))
+    return [d for d in dests if d in dirty]
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) != 1:
+        sys.stderr.write("사용법: gridfin-inject <워크트리 경로>\n")
+        return 2
+    try:
+        worktree, main_root = resolve_worktree(argv[0])
+        manifest = read_manifest(main_root)
+        dests = entries(manifest, main_root)
+    except Rejected as exc:
+        sys.stderr.write("거부: %s\n" % exc)
+        return 2
+
+    failed = []
+    for dest in dests:
+        why = put(main_root, worktree, dest)
+        if why:
+            failed.append((dest, why))
+
+    visible = ignored(worktree, dests)
+    for dest in visible:
+        failed.append((dest, "무시 목록이 덮지 않는다 — 메인에서 gridfin deploy 를 다시 실행한다"))
+
+    if failed:
+        for dest, why in failed:
+            sys.stderr.write("실패: %s — %s\n" % (dest, why))
+        return 1
+    sys.stdout.write("주입: %d개 — %s\n" % (len(dests), worktree))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
