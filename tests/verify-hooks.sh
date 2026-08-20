@@ -512,6 +512,18 @@ c19() {
 c20_desc="C20 커밋이 아닌 Bash 호출은 선언 설정이 없어도 통과한다"
 c20() {
   T=$(deployed)
+  #      등록이 깨져도 커밋이 아닌 호출은 통과해야 한다.
+  #      막으면 복구 경로가 막힌다 — 결손을 고치는 방법이 재배포인데
+  #      그것도 Bash 로 실행된다
+  B=$(deployed)
+  jq 'del(.hooks.PostToolUse)' "$B/.claude/settings.json" > "$B/t.json"
+  mv "$B/t.json" "$B/.claude/settings.json"
+  run_hook "$B" pre-commit "$(bash_in 'gridfin deploy' "$B")" > /dev/null
+  test "$(hook_rc)" = 0
+  #      그 상태에서 커밋은 여전히 막힌다
+  run_hook "$B" pre-commit "$(bash_in 'git commit -m x' "$B")" > /dev/null
+  test "$(hook_rc)" = 2
+
   for cmd in 'git status' 'ls -la' 'git log --oneline' 'echo commit' \
              'git add .' 'git push' 'grep -r "git commit" .' 'cat commit.txt'; do
     run_hook "$T" pre-commit "$(bash_in "$cmd" "$T")" > /dev/null
@@ -614,8 +626,100 @@ c24() {
   test "$(hook_rc)" = 2
 }
 
+# ── 6.5 포맷 ──────────────────────────────────────────────
+
+post_in() {  # $1=file_path $2=cwd
+  python3 -c 'import json,sys; print(json.dumps({"session_id":"t","cwd":sys.argv[2],
+    "hook_event_name":"PostToolUse","tool_name":"Write",
+    "tool_input":{"file_path":sys.argv[1],"content":"x"}}))' "$1" "$2"
+}
+# 가짜 포맷 명령을 선언한다. 형식은 스펙 §3.6이 정한 지점 하나다
+put_format() {  # $1=대상 $2=확장자 $3...=명령
+  d=$1; ext=$2; shift 2
+  python3 -c 'import json,sys
+json.dump({"format": {sys.argv[2]: sys.argv[3:]}}, open(sys.argv[1] + "/gridfin.json", "w"))' \
+    "$d" "$ext" "$@"
+}
+
+c25_desc="C25 format.py 가 어느 경우에도 종료 코드 2를 내지 않는다"
+c25() {
+  T=$(deployed)
+  #      ⓐ 선언 설정이 없다
+  run_hook "$T" format "$(post_in "$T/a.py" "$T")" > /dev/null; test "$(hook_rc)" != 2
+  #      ⓑ stdin 이 JSON 이 아니다
+  run_hook "$T" format 'not json' > /dev/null; test "$(hook_rc)" != 2
+  #      ⓒ 선언된 명령이 없는 프로그램이다
+  put_format "$T" .py 존재하지-않는-명령
+  run_hook "$T" format "$(post_in "$T/a.py" "$T")" > /dev/null; test "$(hook_rc)" != 2
+  #      ⓓ 선언된 명령이 0이 아닌 값으로 끝난다
+  put_format "$T" .py sh -c 'exit 3'
+  run_hook "$T" format "$(post_in "$T/a.py" "$T")" > /dev/null; test "$(hook_rc)" != 2
+  #      ⓔ 선언 설정이 깨진 JSON 이다
+  printf 'not json' > "$T/gridfin.json"
+  run_hook "$T" format "$(post_in "$T/a.py" "$T")" > /dev/null; test "$(hook_rc)" != 2
+  #      ⓕ 공용 모듈이 아예 없다 — 포맷 훅은 쓰지 않지만 죽어도 막으면 안 된다
+  T2=$(deployed); rm "$T2/.claude/scripts/gridfin/gate.py"
+  run_hook "$T2" format "$(post_in "$T2/a.py" "$T2")" > /dev/null; test "$(hook_rc)" != 2
+  #      ⓖ 등록이 불완전하다 — 포맷은 차단하지 않으므로 등록 확인을 부르지 않는다
+  T3=$(deployed); jq 'del(.hooks.PostToolUse)' "$T3/.claude/settings.json" > "$T3/t.json"
+  mv "$T3/t.json" "$T3/.claude/settings.json"
+  run_hook "$T3" format "$(post_in "$T3/a.py" "$T3")" > /dev/null; test "$(hook_rc)" != 2
+}
+
+c26_desc="C26 선언된 명령이 파일을 고쳤으면 GRIDFIN_FORMAT 에 그 경로를 싣는다"
+c26() {
+  T=$(deployed)
+  printf 'before\n' > "$T/a.py"
+  put_format "$T" .py sh -c 'printf "after\n" > "$1"' --
+  out=$(run_hook "$T" format "$(post_in "$T/a.py" "$T")")
+  test "$(hook_rc)" = 0
+  #      파일이 실제로 바뀌었다
+  grep -q after "$T/a.py"
+  #      보고가 additionalContext 로 나온다 — stderr 는 도달하지 않는다
+  printf '%s' "$out" | jq -e '.hookSpecificOutput.hookEventName == "PostToolUse"' > /dev/null
+  line=$(printf '%s' "$out" | jq -r '.hookSpecificOutput.additionalContext' | sed -n 's/^.*GRIDFIN_FORMAT //p' | head -1)
+  printf '%s' "$line" | jq -e --arg p "$T/a.py" '[.changed[]] | index($p) != null' > /dev/null
+}
+
+c27_desc="C27 선언 설정이 없거나 포맷 선언이 없으면 stdout 에 아무것도 쓰지 않는다"
+c27() {
+  T=$(deployed)
+  printf 'x\n' > "$T/a.py"
+  #      ⓐ 선언 설정 파일이 없다
+  out=$(run_hook "$T" format "$(post_in "$T/a.py" "$T")"); test -z "$out"; test "$(hook_rc)" = 0
+  #      ⓑ 파일은 있는데 format 절이 없다
+  printf '{}\n' > "$T/gridfin.json"
+  out=$(run_hook "$T" format "$(post_in "$T/a.py" "$T")"); test -z "$out"
+  #      ⓒ format 절은 있는데 그 확장자가 없다.
+  #      선언된 명령이 **다른 내용**을 쓰게 둔다 — 원본과 같은 내용을 쓰면
+  #      확장자를 무시하고 부르는 구현도 「안 바뀌었다」로 통과한다
+  put_format "$T" .ts sh -c 'printf "다른 내용\n" > "$1"' --
+  out=$(run_hook "$T" format "$(post_in "$T/a.py" "$T")"); test -z "$out"
+  #      파일도 그대로다
+  grep -q '^x$' "$T/a.py"
+  #      보고 경로가 살아 있다. 없으면 아무것도 안 하는 구현이 통과한다
+  put_format "$T" .py sh -c 'printf "changed\n" > "$1"' --
+  run_hook "$T" format "$(post_in "$T/a.py" "$T")" | grep -q GRIDFIN_FORMAT
+}
+
+c28_desc="C28 선언된 명령이 파일을 고치지 않았으면 stdout 에 아무것도 쓰지 않는다"
+c28() {
+  T=$(deployed)
+  printf 'same\n' > "$T/a.py"
+  #      명령은 실행되지만 내용을 바꾸지 않는다
+  put_format "$T" .py sh -c 'cat "$1" > /dev/null' --
+  out=$(run_hook "$T" format "$(post_in "$T/a.py" "$T")")
+  test "$(hook_rc)" = 0
+  test -z "$out"
+  #      바이트가 그대로다
+  grep -q '^same$' "$T/a.py"
+  #      바꾸면 보고가 나온다 — 「언제나 조용한 구현」과 구별한다
+  put_format "$T" .py sh -c 'printf "other\n" > "$1"' --
+  run_hook "$T" format "$(post_in "$T/a.py" "$T")" | grep -q GRIDFIN_FORMAT
+}
+
 # ── 실행기 ────────────────────────────────────────────────
-ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24"
+ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28"
 
 pass=0; fail=0
 for n in ${*:-$ALL}; do

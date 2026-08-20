@@ -51,12 +51,9 @@ def main() -> int:
 def _run() -> int:
     data = gate.read_input(sys.stdin)
 
-    root = gate.project_root(data)
-    result = gate.check_registration(root)
-    if not result["ok"]:
-        _block(result)
-        return 2
-
+    # **커밋인지 먼저 가른다.** 등록 확인을 앞에 두면 등록이 깨졌을 때
+    # 커밋이 아닌 `Bash` 호출까지 전부 막힌다. **그러면 복구 경로가 막힌다** —
+    # 결손을 고치는 방법이 재배포인데 그것도 `Bash` 로 실행된다.
     command = (data.get("tool_input") or {}).get("command")
     verdict = gate.is_commit(command)
     if verdict is None:
@@ -66,6 +63,12 @@ def _run() -> int:
         return 2
     if not verdict:
         return 0
+
+    root = gate.project_root(data)
+    result = gate.check_registration(root)
+    if not result["ok"]:
+        _block(result)
+        return 2
 
     if not (root / gate.CONFIG).is_file():
         _block({"ok": False,
