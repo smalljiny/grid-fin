@@ -6,7 +6,7 @@
 #     훅 스크립트는 파일을 만들지 않으므로 여기서 잴 수 있는 것은 종료 코드와 보고 형식까지다.
 #
 #   bash tests/verify-hooks.sh          전부
-#   bash tests/verify-hooks.sh 1 3      고른 것만
+#   bash tests/verify-hooks.sh 1 5      고른 것만 (번호는 검증 조건 번호다)
 
 set -uo pipefail   # -e 는 시험 함수 안에서만 건다. 실행기가 결과를 모아야 한다
 
@@ -48,10 +48,60 @@ declared_paths() {
   done
 }
 
+# 하네스 픽스처. payload/ 를 복제해 커밋한 저장소다.
+# 실물 저장소를 --from 으로 주면 payload/ 가 dirty 할 때 배포가 거부된다.
+fixture_harness() {
+  h="$GRIDFIN_RUN/harness"
+  if [ ! -d "$h" ]; then
+    git -c init.defaultBranch=main init -q "$h"
+    git -C "$h" config user.email fixture@gridfin
+    git -C "$h" config user.name  gridfin-fixture
+    cp -R "$ROOT/payload" "$h/payload"
+    git -C "$h" add -A
+    git -C "$h" commit -qm v1
+  fi
+  printf '%s' "$h"
+}
+
+# 배포가 끝난 대상 저장소를 하나 만든다.
+# command substitution 안에서는 set -e 가 기대처럼 전파되지 않으므로 직접 전파한다
+deployed() {
+  d=$(mk)
+  if ! (cd "$d" && git init -q && "$ROOT/bin/gridfin" deploy --from "$(fixture_harness)" >/dev/null); then
+    rm -rf "$d"; return 1
+  fi
+  printf '%s' "$d"
+}
+
+# SessionStart 훅을 부르고 stdout 을 돌려준다. 종료 코드는 $HOOK_RC 에 남긴다.
+# 필드는 실측한 것 그대로다(2026-08-20, Claude Code 2.1.237)
+# 종료 코드를 파일로 넘긴다. 이 함수는 명령 치환 안에서 불리므로
+# 변수에 담으면 부속 셸에 갇혀 밖으로 나오지 않는다(실측)
+run_session_start() {  # $1=대상 디렉터리
+  in="$GRIDFIN_RUN/ss.json"
+  printf '{"session_id":"t","transcript_path":"/dev/null","cwd":"%s","hook_event_name":"SessionStart","source":"startup"}' "$1" > "$in"
+  rc=0
+  ( cd "$1" && CLAUDE_PROJECT_DIR="$1" "$1/.claude/scripts/hooks/session-start.py" ) < "$in" > "$GRIDFIN_RUN/ss.out" 2>"$GRIDFIN_RUN/ss.err" || rc=$?
+  printf '%s' "$rc" > "$GRIDFIN_RUN/ss.rc"
+  cat "$GRIDFIN_RUN/ss.out"
+}
+hook_rc() { cat "$GRIDFIN_RUN/ss.rc"; }
+
+# additionalContext 에 실린 GRIDFIN_GATE 줄의 JSON 을 꺼낸다
+gate_json() { jq -r '.hookSpecificOutput.additionalContext' | sed -n 's/^.*GRIDFIN_GATE //p' | head -1; }
+
+# 「보고하지 않는다」를 재는 시험은 그것만으로 거짓 통과한다 —
+# 아무것도 안 하는 구현이 언제나 통과하기 때문이다.
+# 같은 대상을 일부러 깨서 보고가 실제로 나오는지 함께 본다.
+assert_gate_live() {  # $1=대상 디렉터리
+  rm "$1/.claude/scripts/hooks/format.py"
+  run_session_start "$1" | grep -q GRIDFIN_GATE
+}
+
 # ── 6.1 등록과 배선 ────────────────────────────────────────
 
-t1_desc="C1 사건 3개에 훅 4개를 선언하고, 선언된 명령 경로 4개가 payload 안에 파일로 있다"
-t1() {
+c1_desc="C1 사건 3개에 훅 4개를 선언하고, 선언된 명령 경로 4개가 payload 안에 파일로 있다"
+c1() {
   S="$P/claude/settings.json"
   jq -e . "$S" > /dev/null
 
@@ -83,8 +133,8 @@ t1() {
   test "$n" = 4
 }
 
-t2_desc="C2 훅 스크립트 4개가 uv 셔뱅으로 직접 실행되고, stdin 의 JSON 을 읽어 종료한다"
-t2() {
+c2_desc="C2 훅 스크립트 4개가 uv 셔뱅으로 직접 실행되고, stdin 의 JSON 을 읽어 종료한다"
+c2() {
   S="$P/claude/settings.json"
   in="$GRIDFIN_RUN/probe.json"
   printf '%s' '{"hook_event_name":"Probe","cwd":"/tmp"}' > "$in"
@@ -115,8 +165,8 @@ t2() {
   test "$(find "$P/claude/scripts/hooks" -maxdepth 1 -type f | wc -l | tr -d ' ')" = 4
 }
 
-t3_desc="C4 rules.json 의 소유 지점 4개와 식별자 유일성"
-t3() {
+c4_desc="C4 rules.json 의 소유 지점 4개와 식별자 유일성"
+c4() {
   R="$P/rules.json"
   jq -e . "$R" > /dev/null
   O='.["claude/settings.json"].owned'
@@ -145,15 +195,170 @@ t3() {
   done
 }
 
+# ── 6.2 세션 시작 ──────────────────────────────────────────
+
+c3_desc="C3 공용 모듈이 기대 목록에 들어가지 않는다 — 배포된 대상에서 ok 가 참이다"
+c3() {
+  T=$(deployed)
+  #      공용 모듈이 배포는 된다
+  test -f "$T/.claude/scripts/gridfin/gate.py"
+  #      그런데 hooks/ 의 직속 자녀가 아니므로 기대 목록에 없다
+  jq -e '[.files[].dest | select(startswith(".claude/scripts/hooks/"))] | length == 4' "$T/.harness/manifest.json" > /dev/null
+  #      그래서 등록 확인이 통과한다. 모듈을 hooks/ 아래 두면 여기서 결손이 난다
+  out=$(run_session_start "$T")
+  test "$(hook_rc)" = 0
+  printf '%s' "$out" | grep -q GRIDFIN_GATE && return 1
+
+  #      기대 목록이 「직속 자녀」로 한정된다.
+  #      hooks/ 아래에 디렉터리를 파고 파일을 넣어도 결손이 나지 않아야 한다.
+  #      한정하지 않으면 hooks/lib/ 를 만드는 순간 같은 자기모순이 되살아난다(S34)
+  mkdir -p "$T/.claude/scripts/hooks/lib"
+  printf 'x\n' > "$T/.claude/scripts/hooks/lib/helper.py"
+  jq '.files += [{"dest":".claude/scripts/hooks/lib/helper.py"}]' "$T/.harness/manifest.json" > "$T/t.json"
+  mv "$T/t.json" "$T/.harness/manifest.json"
+  out=$(run_session_start "$T")
+  test "$(hook_rc)" = 0
+  printf '%s' "$out" | grep -q GRIDFIN_GATE && return 1
+  #      그 상태에서 검사가 여전히 살아 있다
+  assert_gate_live "$T"
+}
+
+c5_desc="C5 등록이 온전하면 종료 코드 0으로 끝나고 결손을 보고하지 않는다"
+c5() {
+  T=$(deployed)
+  out=$(run_session_start "$T")
+  test "$(hook_rc)" = 0
+  #      아무것도 보고하지 않는다. 「보고는 하는데 ok 가 참」과 구별한다
+  test -z "$out"
+  #      검사가 살아 있는지 함께 본다. 없으면 아무것도 안 하는 구현이 통과한다
+  assert_gate_live "$T"
+
+  #      환경변수가 없으면 stdin 의 cwd 로 루트를 찾는다.
+  #      환경변수만 보면 하위 세션이나 다른 실행기에서 루트를 못 찾는다
+  T2=$(deployed)
+  in="$GRIDFIN_RUN/ss2.json"
+  printf '{"session_id":"t","transcript_path":"/dev/null","cwd":"%s","hook_event_name":"SessionStart","source":"startup"}' "$T2" > "$in"
+  rc=0
+  ( cd / && env -u CLAUDE_PROJECT_DIR "$T2/.claude/scripts/hooks/session-start.py" ) < "$in" > "$GRIDFIN_RUN/ss2.out" 2>&1 || rc=$?
+  test "$rc" = 0
+  test ! -s "$GRIDFIN_RUN/ss2.out"
+  #      그 경로에서도 검사가 살아 있다
+  rm "$T2/.claude/scripts/hooks/format.py"
+  ( cd / && env -u CLAUDE_PROJECT_DIR "$T2/.claude/scripts/hooks/session-start.py" ) < "$in" | grep -q GRIDFIN_GATE
+}
+
+c6_desc="C6 훅 선언 1개를 지우면 additionalContext 에 hook_declaration 으로 그 경로를 싣는다"
+c6() {
+  T=$(deployed)
+  jq 'del(.hooks.PostToolUse)' "$T/.claude/settings.json" > "$T/t.json"
+  mv "$T/t.json" "$T/.claude/settings.json"
+  g=$(run_session_start "$T" | gate_json)
+  test "$(hook_rc)" = 0
+  printf '%s' "$g" | jq -e '.ok == false' > /dev/null
+  printf '%s' "$g" | jq -e '[.missing[] | select(.kind=="hook_declaration") | .path]
+                            | index(".claude/scripts/hooks/format.py") != null' > /dev/null
+
+  #      기대 목록이 매니페스트에서 나온다. 스크립트에 박아 두면 이것을 못 잡는다 —
+  #      배포 대상이 늘 때마다 고칠 곳이 늘지 않는 것이 이 설계의 요점이다
+  T2=$(deployed)
+  printf 'x\n' > "$T2/.claude/scripts/hooks/extra.py"
+  jq '.files += [{"dest":".claude/scripts/hooks/extra.py"}]' "$T2/.harness/manifest.json" > "$T2/t.json"
+  mv "$T2/t.json" "$T2/.harness/manifest.json"
+  g=$(run_session_start "$T2" | gate_json)
+  printf '%s' "$g" | jq -e '[.missing[] | select(.kind=="hook_declaration") | .path]
+                            | index(".claude/scripts/hooks/extra.py") != null' > /dev/null
+}
+
+c7_desc="C7 선언된 경로가 파일로 없으면 kind 가 hook_file 이다"
+c7() {
+  T=$(deployed)
+  rm "$T/.claude/scripts/hooks/pre-write.py"
+  g=$(run_session_start "$T" | gate_json)
+  test "$(hook_rc)" = 0
+  printf '%s' "$g" | jq -e '.ok == false' > /dev/null
+  printf '%s' "$g" | jq -e '[.missing[] | select(.kind=="hook_file") | .path]
+                            | index(".claude/scripts/hooks/pre-write.py") != null' > /dev/null
+  #      선언이 사라진 것이 아니므로 hook_declaration 으로 보고하지 않는다
+  printf '%s' "$g" | jq -e '[.missing[] | select(.kind=="hook_declaration")] | length == 0' > /dev/null
+}
+
+c8_desc="C8 매니페스트가 없으면 kind 가 manifest 다"
+c8() {
+  T=$(deployed)
+  rm "$T/.harness/manifest.json"
+  g=$(run_session_start "$T" | gate_json)
+  test "$(hook_rc)" = 0
+  printf '%s' "$g" | jq -e '.ok == false and ([.missing[].kind] | index("manifest") != null)' > /dev/null
+}
+
+c9_desc="C9 session-start.py 는 어느 경우에도 종료 코드 2를 내지 않는다"
+c9() {
+  T=$(deployed)
+  #      ⓐ 정상
+  run_session_start "$T" > /dev/null; test "$(hook_rc)" != 2
+  #      ⓑ 매니페스트가 깨진 JSON — 예외를 삼켜 조용히 통과해도 안 되고 막아도 안 된다
+  printf 'not json' > "$T/.harness/manifest.json"
+  g=$(run_session_start "$T" | gate_json); test "$(hook_rc)" != 2
+  printf '%s' "$g" | jq -e '.ok == false' > /dev/null
+  #      ⓒ 설정이 깨진 JSON
+  T2=$(deployed); printf '{' > "$T2/.claude/settings.json"
+  g=$(run_session_start "$T2" | gate_json); test "$(hook_rc)" != 2
+  printf '%s' "$g" | jq -e '.ok == false' > /dev/null
+  #      ⓓ stdin 이 JSON 이 아니다
+  T3=$(deployed); rc=0
+  printf 'not json' | ( cd "$T3" && CLAUDE_PROJECT_DIR="$T3" "$T3/.claude/scripts/hooks/session-start.py" ) >/dev/null 2>&1 || rc=$?
+  test "$rc" != 2
+  #      ⓔ 설정 파일 자체가 없다
+  T4=$(deployed); rm "$T4/.claude/settings.json"
+  run_session_start "$T4" > /dev/null; test "$(hook_rc)" != 2
+}
+
+c16_desc="C16 사용자가 더한 훅 선언이 있어도 등록 확인이 통과한다"
+c16() {
+  T=$(deployed)
+  #      기대 목록에 없는 경로를 사용자가 더한다. 파일은 만들지 않는다 —
+  #      하네스가 배포하지 않은 것의 존재까지 책임지면 남의 훅 때문에 막힌다
+  jq '.hooks.PreToolUse += [{"matcher":"Read","hooks":[{"type":"command",
+       "command":"${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks-mine/mine.py"}]}]'      "$T/.claude/settings.json" > "$T/t.json"
+  mv "$T/t.json" "$T/.claude/settings.json"
+  out=$(run_session_start "$T")
+  test "$(hook_rc)" = 0
+  test -z "$out"
+  #      사용자 훅을 그대로 둔 채 하네스 훅을 깨면 보고가 나온다 —
+  #      남의 선언 때문에 검사가 통째로 꺼진 것이 아니다
+  assert_gate_live "$T"
+}
+
+c17_desc="C17 선언 경로가 세 형태 중 어느 것이어도 기대 목록과 대조된다"
+c17() {
+  for form in 1 2 3; do
+    T=$(deployed)
+    case $form in
+      1) v='${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/session-start.py' ;;
+      2) v='$CLAUDE_PROJECT_DIR/.claude/scripts/hooks/session-start.py' ;;
+      3) v="$T/.claude/scripts/hooks/session-start.py" ;;
+    esac
+    jq --arg v "$v" '.hooks.SessionStart[0].hooks[0].command = $v'        "$T/.claude/settings.json" > "$T/t.json"
+    mv "$T/t.json" "$T/.claude/settings.json"
+    out=$(run_session_start "$T")
+    test "$(hook_rc)" = 0
+    #      셋 다 같은 경로로 풀려야 하므로 결손이 없다
+    test -z "$out"
+    #      그 형태를 둔 채 다른 훅을 깨면 보고가 나온다 —
+    #      경로가 안 풀려서 조용한 것이 아니라 실제로 대조가 됐다
+    assert_gate_live "$T"
+  done
+}
+
 # ── 실행기 ────────────────────────────────────────────────
-ALL="1 2 3"
+ALL="1 2 3 4 5 6 7 8 9 16 17"
 
 pass=0; fail=0
 for n in ${*:-$ALL}; do
-  desc=$(eval "printf '%s' \"\${t${n}_desc:-}\"")
+  desc=$(eval "printf '%s' \"\${c${n}_desc:-}\"")
   if [ -z "$desc" ]; then printf '  ???  %-3s 그런 시험이 없다\n' "$n"; fail=$((fail+1)); continue; fi
   log="$GRIDFIN_RUN/t$n.log"
-  ( set -e; "t$n" ) >"$log" 2>&1
+  ( set -e; "c$n" ) >"$log" 2>&1
   rc=$?
   if [ "$rc" -eq 0 ]; then
     printf '  PASS %-3s %s\n' "$n" "$desc"; pass=$((pass+1))
