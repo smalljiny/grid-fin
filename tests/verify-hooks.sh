@@ -718,8 +718,137 @@ c28() {
   run_hook "$T" format "$(post_in "$T/a.py" "$T")" | grep -q GRIDFIN_FORMAT
 }
 
+# ── 6.7 갱신 경로 ─────────────────────────────────────────
+
+# 옛 배선(PreToolUse 에 (Write, pre-commit.py) 하나)과 새 배선을 한 저장소의
+# 두 커밋으로 만든다. 같은 객체 이력을 공유해야 base 를 꺼낼 수 있다.
+# 실물 payload 를 복제하므로 이 이슈가 payload 를 고치면 픽스처도 따라 바뀐다.
+old_new_harness() {
+  h="$GRIDFIN_RUN/upgrade"
+  if [ ! -d "$h" ]; then
+    git -c init.defaultBranch=main init -q "$h"
+    git -C "$h" config user.email fixture@gridfin
+    git -C "$h" config user.name  gridfin-fixture
+    cp -R "$ROOT/payload" "$h/payload"
+    #      옛 상태로 되돌린다 — 이슈 #1 이 배포한 형태다
+    rm -f "$h/payload/claude/scripts/hooks/pre-write.py"
+    rm -rf "$h/payload/claude/scripts/gridfin"
+    python3 - "$h/payload/claude/settings.json" <<'PY'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p))
+d["hooks"] = {
+    "SessionStart": d["hooks"]["SessionStart"],
+    "PreToolUse": [{"matcher": "Write", "hooks": [{"type": "command",
+        "command": "${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/pre-commit.py"}]}],
+}
+json.dump(d, open(p, "w"), ensure_ascii=False, indent=2)
+PY
+    python3 - "$h/payload/rules.json" <<'PY'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p))
+owned = d["claude/settings.json"]["owned"]
+d["claude/settings.json"]["owned"] = [o for o in owned if o["pointer"] != "/hooks/PostToolUse"]
+json.dump(d, open(p, "w"), ensure_ascii=False, indent=2)
+PY
+    git -C "$h" add -A; git -C "$h" commit -qm "옛 배선"
+    #      새 배선으로 올린다. 허용 목록에도 항목을 하나 더해
+    #      permissions.allow 가 실제로 관리되는지 잴 수 있게 한다
+    rm -rf "$h/payload"; cp -R "$ROOT/payload" "$h/payload"
+    python3 - "$h/payload/claude/settings.json" <<'PY'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p))
+d["permissions"]["allow"].append("Bash(하네스가 더한 것:*)")
+json.dump(d, open(p, "w"), ensure_ascii=False, indent=2)
+PY
+    git -C "$h" add -A; git -C "$h" commit -qm "새 배선"
+  fi
+  printf '%s' "$h"
+}
+
+# 옛 배선이 설치된 대상을 만든다
+old_target() {
+  h=$(old_new_harness)
+  old=$(git -C "$h" rev-parse HEAD~1)
+  d=$(mk)
+  if ! ( cd "$d" && git -c init.defaultBranch=main init -q . &&
+         git config user.email a@b && git config user.name a &&
+         git -C "$h" checkout -q "$old" &&
+         "$ROOT/bin/gridfin" deploy --from "$h" >/dev/null ); then
+    git -C "$h" checkout -q main 2>/dev/null; rm -rf "$d"; return 1
+  fi
+  git -C "$h" checkout -q main
+  printf '%s' "$d"
+}
+
+c39_desc="C39 재배포가 옛 항목을 지우고 새 항목 2개를 넣는다"
+c39() {
+  h=$(old_new_harness); T=$(old_target)
+  #      전제를 시험이 직접 확인한다. 옛 배선이 아니면 이 조건이 아무것도 재지 않는다
+  jq -e '.hooks.PreToolUse | length == 1' "$T/.claude/settings.json" > /dev/null
+  jq -e '.hooks.PreToolUse[0].matcher == "Write"' "$T/.claude/settings.json" > /dev/null
+  jq -e '.hooks.PreToolUse[0].hooks[0].command | test("pre-commit")' "$T/.claude/settings.json" > /dev/null
+  test ! -f "$T/.claude/scripts/hooks/pre-write.py"
+
+  ( cd "$T" && "$ROOT/bin/gridfin" deploy --from "$h" >/dev/null )
+
+  #      옛 항목이 사라진다. 남으면 뒤바뀐 배선이 살아남는다
+  jq -e '[.hooks.PreToolUse[] | select(.matcher == "Write" and (.hooks[0].command | test("pre-commit")))]
+         | length == 0' "$T/.claude/settings.json" > /dev/null
+  #      새 항목 2개가 들어간다
+  jq -e '[.hooks.PreToolUse[] | select(.matcher == "Write|Edit" and (.hooks[0].command | test("pre-write")))]
+         | length == 1' "$T/.claude/settings.json" > /dev/null
+  jq -e '[.hooks.PreToolUse[] | select(.matcher == "Bash" and (.hooks[0].command | test("pre-commit")))]
+         | length == 1' "$T/.claude/settings.json" > /dev/null
+  #      PostToolUse 와 공용 모듈도 함께 온다
+  jq -e '.hooks.PostToolUse | length == 1' "$T/.claude/settings.json" > /dev/null
+  test -f "$T/.claude/scripts/hooks/pre-write.py"
+  test -f "$T/.claude/scripts/gridfin/gate.py"
+  #      갱신된 대상에서 등록 확인이 통과한다 — 갱신이 게이트를 세운다
+  out=$(run_session_start "$T")
+  test "$(hook_rc)" = 0
+  test -z "$out"
+}
+
+c40_desc="C40 사용자가 더한 PreToolUse 항목은 C39 에서 살아남는다"
+c40() {
+  h=$(old_new_harness); T=$(old_target)
+  jq '.hooks.PreToolUse += [{"matcher":"MyTool","hooks":[{"type":"command","command":"내 훅"}]}]' \
+     "$T/.claude/settings.json" > "$T/t.json"
+  mv "$T/t.json" "$T/.claude/settings.json"
+  ( cd "$T" && "$ROOT/bin/gridfin" deploy --from "$h" >/dev/null )
+  jq -e '[.hooks.PreToolUse[].matcher] | index("MyTool") != null' "$T/.claude/settings.json" > /dev/null
+  #      하네스의 갱신도 함께 반영된다
+  jq -e '[.hooks.PreToolUse[].matcher] | index("Bash") != null' "$T/.claude/settings.json" > /dev/null
+}
+
+c41_desc="C41 사용자가 더한 permissions.allow 항목은 C39 에서 살아남는다"
+c41() {
+  h=$(old_new_harness); T=$(old_target)
+  jq '.permissions.allow += ["Bash(rg:*)"]' "$T/.claude/settings.json" > "$T/t.json"
+  mv "$T/t.json" "$T/.claude/settings.json"
+  ( cd "$T" && "$ROOT/bin/gridfin" deploy --from "$h" >/dev/null )
+  jq -e '[.permissions.allow[]] | index("Bash(rg:*)") != null' "$T/.claude/settings.json" > /dev/null
+  jq -e '[.permissions.allow[]] | index("Bash(git:*)") != null' "$T/.claude/settings.json" > /dev/null
+  #      하네스가 더한 항목도 온다. 이것이 없으면 allow 를 소유 지점에서 빼도
+  #      「사용자 것이 살아남았다」만으로 통과한다
+  jq -e '[.permissions.allow[]] | index("Bash(하네스가 더한 것:*)") != null' \
+     "$T/.claude/settings.json" > /dev/null
+}
+
+c42_desc="C42 이슈 #1 의 시험이 전부 통과한다"
+c42() {
+  #      갱신이 필요한 시험이 있으면 갱신하되 재는 것은 바꾸지 않는다.
+  #      개수가 아니라 「전부 통과한다」에 조건을 건다
+  bash "$ROOT/tests/verify-deploy.sh" > "$GRIDFIN_RUN/deploy.log" 2>&1 ||
+    { tail -5 "$GRIDFIN_RUN/deploy.log"; return 1; }
+  grep -q '통과 50 · 실패 0' "$GRIDFIN_RUN/deploy.log"
+}
+
 # ── 실행기 ────────────────────────────────────────────────
-ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28"
+ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 39 40 41 42"
 
 pass=0; fail=0
 for n in ${*:-$ALL}; do
