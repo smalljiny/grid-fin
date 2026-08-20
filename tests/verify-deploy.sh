@@ -561,18 +561,24 @@ t38() {
   test -L .claude/scripts/hooks/format.py
 }
 
-t39_desc="매니페스트의 dest가 대상 밖을 가리키면 지우지 않는다"
+t39_desc="매니페스트의 dest가 대상 밖을 가리키면 읽는 시점에 전체 거부한다"
 t39() {
-  #      배포 경로의 dest 는 git ls-tree 가 만들지만 삭제 경로는 매니페스트에서
-  #      곧장 받는다. ../ 와 절대 경로가 실제로 저장소 밖을 지웠다(실측)
+  #      하네스는 프로젝트 밖의 파일을 다루지 않는다. 배포 경로의 dest 는
+  #      git ls-tree 가 만들지만 삭제 경로는 매니페스트에서 곧장 받고,
+  #      ../ 와 절대 경로가 실제로 저장소 밖을 지웠다(실측).
+  #      지우는 지점이 아니라 읽는 지점에서 본다 — 목적지를 쓰는 코드가 늘어도 덮인다
   T=$(fresh); cd "$T"
   echo 지우면 안 되는 파일 > "$T/../victim.txt"
   H="sha256:$(shasum -a 256 "$T/../victim.txt" | cut -d' ' -f1)"
   jq --arg h "$H" '.files += [{src:"payload/claude/x", dest:"../victim.txt", merge:"text",
        sourceSha:.attemptedSha, sourceHash:$h, installedHash:$h}]' .harness/manifest.json > t.json
   cat t.json > .harness/manifest.json && rm t.json
-  partial  gridfin deploy --from "$V1"
+  BEFORE=$(tree_hash .claude)
+  rejected gridfin deploy --from "$V1" --json > out.json
+  jq -e '.outcome == "rejected" and .reason == "manifest_invalid"' out.json
+  jq -e '.files | length == 0' out.json
   test -f "$T/../victim.txt"
+  test "$(tree_hash .claude)" = "$BEFORE"                        # 아무것도 안 썼다
   rm "$T/../victim.txt"
 }
 
@@ -705,6 +711,55 @@ t47() {
   rm "$V2/payload/dirty.tmp"
 }
 
+t48_desc="그 파일에 쓸 권한이 없으면 그 파일만 건너뛴다"
+t48() {
+  #      계약의 파일별 건너뛰기 목록에 있는데 구현이 없어 파이썬 오류로 죽었다(실측).
+  #      권한은 1단계에서 미리 알 수 없다 — 쓰려고 해야 드러난다
+  T=$(fresh); cd "$T"
+  chmod 444 .claude/scripts/hooks/pre-commit.py
+  partial  gridfin deploy --from "$V2" --json > out.json
+  chmod 644 .claude/scripts/hooks/pre-commit.py
+  jq -e '.files[] | select(.dest==".claude/scripts/hooks/pre-commit.py")
+         | .status == "skipped" and .code == "no_permission"' out.json
+  jq -e '.files[] | select(.dest==".claude/settings.json") | .status == "updated"' out.json
+  entry .harness/manifest.json .claude/scripts/hooks/pre-commit.py | grep -q sourceSha
+}
+
+t49_desc="건너뛴 파일마다 기계가 읽는 code 가 붙는다"
+t49() {
+  #      skipped 하나에 원인 넷이 들어가는데 구분이 사람이 읽는 문장에만 있었다.
+  #      부르는 쪽의 후속 행동이 갈린다 — 다시 시도 · 사용자에게 묻기 · 막힌 것으로 두기
+  T=$(fresh); cd "$T"
+  echo '{ 깨진 JSON' > .claude/settings.json
+  partial  gridfin deploy --from "$V2" --json > out.json
+  jq -e '.files[] | select(.dest==".claude/settings.json") | .code == "invalid_json"' out.json
+
+  T=$(fresh); cd "$T"
+  OUT=$(mk); cp .claude/scripts/hooks/pre-commit.py "$OUT/real.py"
+  ln -sf "$OUT/real.py" .claude/scripts/hooks/pre-commit.py
+  partial  gridfin deploy --from "$V2" --json > out.json
+  jq -e '.files[] | select(.dest==".claude/scripts/hooks/pre-commit.py") | .code == "symlink"' out.json
+
+  T=$(fresh); cd "$T"
+  jq 'del(.files[] | select(.dest==".claude/scripts/hooks/format.py"))' .harness/manifest.json > t.json
+  cat t.json > .harness/manifest.json && rm t.json
+  partial  gridfin deploy --from "$V2" --json > out.json
+  jq -e '.files[] | select(.dest==".claude/scripts/hooks/format.py") | .code == "never_deployed"' out.json
+}
+
+t50_desc="인자가 잘못되면 bad_usage 로 거부한다"
+t50() {
+  #      이유가 비어 있으면 부르는 쪽에서 인자 오류와 하네스가 더러운 것이 구별되지 않는다
+  T=$(fresh); cd "$T"
+  #      깃발 순서가 판정을 바꾸면 안 된다. 오류 뒤에 온 --json 도 켜져야 한다
+  rejected gridfin deploy --엉뚱한인자 --json > out.json
+  jq -e '.outcome == "rejected" and .reason == "bad_usage"' out.json
+  rejected gridfin deploy --json --엉뚱한인자 > out.json
+  jq -e '.reason == "bad_usage"' out.json
+  rejected gridfin --json > out.json
+  jq -e '.reason == "bad_usage"' out.json
+}
+
 # ── 실행기 ────────────────────────────────────────────────
 # 시험마다 함수로 나눈 이유가 있다. set -e 가 걸린 한 덩어리로 두면 첫 실패에서
 # 멈춰 어느 시험이 통과했는지 알 수 없다. 단계적 구현에서는 대부분의 시험이
@@ -713,7 +768,7 @@ t47() {
 #   bash tests/verify-deploy.sh          전부
 #   bash tests/verify-deploy.sh 1 2 19   고른 것만
 
-ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47"
+ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50"
 
 restore_fixtures() {
   # 앞 시험이 fixture 를 더럽힌 채 실패해도 다음 시험이 영향받지 않게 되돌린다.
