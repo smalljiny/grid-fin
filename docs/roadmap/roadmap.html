@@ -246,6 +246,8 @@
   .s-card.nextup .s-list li::before { color: var(--star); }
   .s-list li.muted { color: var(--ink-3); }
   .s-list li.muted::before { content: "⏸"; color: var(--ink-3); font-size: 10px; }
+  .s-list li.is-done { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--line-strong); }
+  .s-list li.is-done::before { content: "✓"; color: var(--done); text-decoration: none; }
 
   /* ── 의존 그래프 ────────────────────────── */
   :root {
@@ -462,6 +464,9 @@
   .next { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
   .next-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 15px 17px; box-shadow: var(--shadow); }
   .next-n { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--star); letter-spacing: .05em; }
+  .next-card.is-done { border-color: var(--done); background: var(--panel-2); }
+  .next-card.is-done .next-n { color: var(--done); }
+  .next-card.is-done .next-t { color: var(--ink-2); }
   .next-t { font-size: 14px; font-weight: 620; margin: 3px 0 4px; }
   .next-d { font-size: 12.5px; color: var(--ink-2); }
 
@@ -522,22 +527,22 @@
 
 <div class="wrap">
   <header>
-    <p class="eyebrow">grid fin · 개인용 개발 하네스 · 2026-08-18 · <strong>구현 착수 직전</strong></p>
+    <p class="eyebrow">grid fin · 개인용 개발 하네스 · 2026-08-20 · <strong>M0 진행 중</strong></p>
     <h1>grid fin 구현 로드맵</h1>
-    <p class="lede">조사와 설계는 끝났고, 구현 코드는 아직 없습니다. 현재 <strong>착수를 막는 미결 항목은 없습니다.</strong> 다음 단계는 하네스의 최소 기반을 만들고, 그것을 grid fin 저장소에 직접 배포하는 일입니다. 그 뒤부터는 하네스가 자기 개발 과정에도 적용됩니다.</p>
-    <p class="lede" style="margin-top:8px"><strong>현재 기준선</strong> — 조사 31편, 설계 드래프트 5편, 해소한 미결 44건, 남은 미결 23건입니다. <strong>이 문서는 일정표가 아니라 실행 순서를 정리한 로드맵입니다.</strong> 개인 프로젝트 규모에서는 통계적으로 설계를 검증하기 어렵기 때문에(<a href="../research/evaluation.md">평가 조사 §1.5</a>), 실제 검증은 워크플로를 처음부터 끝까지 한 번 실행하는 M1에서 시작합니다.</p>
+    <p class="lede">조사와 설계는 끝났고, 구현이 시작됐습니다. <strong>M0의 네 가지 중 배포 스크립트가 끝났습니다</strong>(<code>bin/gridfin</code>, PR #15, 2026-08-20 머지). 남은 세 가지는 훅 스크립트, 선언 설정 파일, Python 검사 어댑터입니다. 넷이 모두 끝나면 grid fin 저장소에 배포하고, 그 뒤부터는 하네스가 자기 개발 과정에도 적용됩니다.</p>
+    <p class="lede" style="margin-top:8px"><strong>현재 기준선</strong> — 조사 31편, 설계 드래프트 5편, 해소한 미결 51건, 남은 미결 23건입니다(<a href="../draft/open-questions.md">미결 목록 파일</a>의 항목 수). <strong>이 문서는 일정표가 아니라 실행 순서를 정리한 로드맵입니다.</strong> 개인 프로젝트 규모에서는 통계적으로 설계를 검증하기 어렵기 때문에(<a href="../research/evaluation.md">평가 조사 §1.5</a>), 실제 검증은 워크플로를 처음부터 끝까지 한 번 실행하는 M1에서 시작합니다.</p>
 
     <!-- ══ HERO 진행 상황 ══ -->
     <div class="orbit">
       <div class="orbit-head">
         <h2>진행 상황</h2>
         <span class="tag">설계부터 M4까지 · 관문 3개</span>
-        <span class="pct"><b>1 / 5</b> 구간 (설계 완료)</span>
+        <span class="pct"><b>1 / 5</b> 구간 (설계 완료 · M0 1/4)</span>
       </div>
 
       <div class="rail-box">
         <div class="rail" aria-hidden="true"></div>
-        <div class="rail-fill" style="--fill: 13%; --fill-v: 14%;" aria-hidden="true"></div>
+        <div class="rail-fill" style="--fill: 19%; --fill-v: 20%;" aria-hidden="true"></div>
 
         <div class="now-flag" style="--now-x: 16.7%;" aria-hidden="true">
           <span class="now-pill">지금 여기</span>
@@ -553,11 +558,11 @@
             <div class="st-bar"><i style="width:100%"></i></div>
           </div>
 
-          <div class="st todo now">
-            <div class="node">0/4</div>
+          <div class="st wip now">
+            <div class="node">1/4</div>
             <div class="st-id">M0</div>
             <div class="st-lbl">기반 만들기</div>
-            <div class="st-bar"><i style="width:0%"></i></div>
+            <div class="st-bar"><i style="width:25%"></i></div>
           </div>
 
           <div class="st gate locked">
@@ -622,14 +627,14 @@
     <div class="status">
       <div class="s-card past">
         <div class="s-k">완료한 일</div>
-        <div class="s-t">설계와 미결 정리</div>
-        <p class="s-d"><a href="../draft/overview.html">설계 드래프트 5편</a>에서 계층 4개, 상태 5개, 판정 4상태, 어댑터 슬롯 5개, 실행 단계 14개를 정리했습니다. 마지막으로 닫은 결정은 <strong>스킬 기준선</strong>, <strong>기존 하네스 차용 방식</strong>, <strong>기존 하네스를 설치하지 않는다는 원칙</strong>입니다.</p>
+        <div class="s-t">설계와 배포 스크립트</div>
+        <p class="s-d"><a href="../draft/overview.html">설계 드래프트 5편</a>에서 계층 4개, 상태 5개, 판정 4상태, 어댑터 슬롯 5개, 실행 단계 14개를 정리했습니다. 그 위에서 <strong>M0의 첫 산출물인 배포 스크립트가 끝났습니다.</strong> 시험 50개가 통과합니다.</p>
       </div>
       <div class="s-card here">
         <div class="s-k">지금 할 일 — M0</div>
         <div class="s-t">최소 기반 네 가지</div>
         <ul class="s-list">
-          <li>배포 스크립트</li>
+          <li class="is-done">배포 스크립트</li>
           <li>훅 스크립트 네 개</li>
           <li>선언 설정 파일</li>
           <li>Python 검사 어댑터 하나</li>
@@ -739,7 +744,7 @@
         <div class="ms-head">
           <span class="ms-id">설계</span>
           <span class="ms-name">조사 · 드래프트 · 미결 정리</span>
-          <span class="ms-meta">완료 · 코드 없음</span>
+          <span class="ms-meta">완료 · 산출물은 문서</span>
         </div>
         <div class="cards">
           <div class="card d">
@@ -753,9 +758,9 @@
             <div class="kv"><span class="k">핵심</span><span class="v">계층 4개 · 상태 5개 · 하드 차단 7개 · 실행 14단계 · 정본 4개</span></div>
           </div>
           <div class="card d">
-            <div class="card-top"><span class="chip d">완료</span><span class="card-title">미결 44건 해소</span></div>
+            <div class="card-top"><span class="chip d">완료</span><span class="card-title">미결 51건 해소</span></div>
             <div class="kv"><span class="k">남음</span><span class="v">23건 — <strong>착수를 막는 것은 0건</strong></span></div>
-            <div class="kv rest"><span class="k">최근 결정</span><span class="v">스킬 기준선 · 기존 하네스 차용 방식 · 기존 하네스 미설치</span></div>
+            <div class="kv rest"><span class="k">최근 결정</span><span class="v">배포 갱신 규칙 · 작업 스펙 추적 · 기존 하네스 차용 판정 · 하네스가 쓰는 언어</span></div>
           </div>
         </div>
       </div>
@@ -765,18 +770,21 @@
           <span class="ms-id">M0</span>
           <span class="ms-name">기반 만들기</span>
           <span class="ms-now">지금</span>
-          <span class="ms-meta">하네스가 없는 상태에서 작성 · 0/4</span>
+          <span class="ms-meta">하네스가 없는 상태에서 작성 · 1/4</span>
         </div>
         <div class="cards">
-          <div class="card t">
-            <div class="card-top"><span class="chip t">미착수</span><span class="card-title">배포 스크립트</span></div>
-            <div class="kv"><span class="k">하는 일</span><span class="v">하네스 저장소의 파일을 대상 프로젝트에 설치하고, 설치한 버전을 기록합니다</span></div>
+          <div class="card d">
+            <div class="card-top"><span class="chip d">완료</span><span class="card-title">배포 스크립트</span></div>
+            <div class="kv"><span class="k">결과</span><span class="v"><code>bin/gridfin</code>. 하네스 저장소의 <code>payload/</code>를 대상 프로젝트에 설치하고, 설치한 리비전을 매니페스트에 기록합니다(이슈 #1, PR #15)</span></div>
+            <div class="kv rest"><span class="k">방식</span><span class="v">파일마다 3-way merge를 수행합니다. <strong>병합의 기준본은 대상이 아니라 하네스 저장소에서 꺼냅니다.</strong> 그래서 배포물을 git으로 추적하지 않아도 사용자가 고친 부분이 살아남습니다</span></div>
+            <div class="kv rest"><span class="k">조건</span><span class="v">시험 50개가 통과합니다(<code>bash tests/verify-deploy.sh</code>)</span></div>
             <div class="kv rest"><span class="k">이유</span><span class="v">배포가 되어야 훅을 설정에 등록할 수 있고, 훅이 등록되어야 이후 작업을 강제할 수 있습니다</span></div>
           </div>
           <div class="card t">
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title">훅 스크립트 네 개</span></div>
             <div class="kv"><span class="k">대상</span><span class="v">세션 시작 · 파일 쓰기 직전 · 커밋 직전 · 파일을 쓴 뒤 포맷</span></div>
             <div class="kv rest"><span class="k">방식</span><span class="v">네 훅을 따로 켜지 않습니다. 훅 등록 확인은 네 훅이 모두 설정에 등록되어야 통과합니다</span></div>
+            <div class="kv rest"><span class="k">제약</span><span class="v">하네스가 만드는 실행물은 bash와 uv 기반 Python뿐입니다. Node를 쓰지 않습니다. 훅은 <code>#!/usr/bin/env -S uv run --script</code> 셔뱅으로 부르고, 설정에는 경로만 적습니다</span></div>
           </div>
           <div class="card t">
             <div class="card-top"><span class="chip t">미착수</span><span class="card-title">선언 설정 파일</span></div>
@@ -982,15 +990,15 @@
   <section class="sec" aria-label="다음 한 수">
     <div class="sec-head">
       <h2>다음 한 수</h2>
-      <span class="sec-tag">M0 착수 순서</span>
+      <span class="sec-tag">M0 진행 순서</span>
     </div>
-    <p class="sec-note">M0에서 만들 네 가지의 순서입니다. 각 항목을 얼마나 직접 만들고 얼마나 참고 하네스에서 가져올지는 해당 작업을 시작할 때 판단합니다.</p>
+    <p class="sec-note">M0에서 만들 네 가지의 순서입니다. <strong>1번이 끝났고 다음은 2번입니다.</strong> 각 항목을 얼마나 직접 만들고 얼마나 참고 하네스에서 가져올지는 해당 작업을 시작할 때 판단합니다.</p>
 
     <div class="next">
-      <div class="next-card">
-        <div class="next-n">1</div>
+      <div class="next-card is-done">
+        <div class="next-n">1 · 완료</div>
         <div class="next-t">배포 스크립트</div>
-        <p class="next-d">나머지 세 작업이 이 배포 스크립트 위에 올라갑니다. 배포 대상 8가지는 설계 §7-4에 있고, <strong>M0에서 넣는 것은 다섯</strong>입니다 — 훅 스크립트, 훅 선언, 권한 허용 목록, 선언 설정, 매니페스트. 스킬과 검토용 에이전트는 M2에서 늘어납니다.</p>
+        <p class="next-d">나머지 세 작업이 이 배포 스크립트 위에 올라갑니다. 배포 대상 8가지는 설계 §7-4에 있고, <strong>M0에서 넣는 것은 다섯입니다.</strong> 훅 스크립트, 훅 선언, 권한 허용 목록, 선언 설정, 매니페스트입니다. 스킬과 검토용 에이전트는 M2에서 늘어납니다. 지금 <code>payload/</code>에 들어 있는 것은 훅 선언과 권한 허용 목록이고, 훅 스크립트는 2번이 채울 자리표시본입니다.</p>
       </div>
       <div class="next-card">
         <div class="next-n">2</div>
@@ -1013,7 +1021,7 @@
   <footer>
     <span>grid fin 구현 로드맵</span>
     <span>최초 작성 2026-08-13</span>
-    <span>최종 수정 2026-08-18</span>
+    <span>최종 수정 2026-08-20</span>
     <span>성격: 순서를 정함 · 일정이 아님</span>
     <span>미결 원본 → <a href="../draft/open-questions.md">open-questions.md</a></span>
   </footer>

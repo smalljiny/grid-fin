@@ -36,7 +36,7 @@ GRIDFIN_RUN="$GRIDFIN_RUN" eval "$(GRIDFIN_RUN="$GRIDFIN_RUN" bash tests/make-fi
 # V3     : V2에서 pre-commit.py 끝에 또 한 줄 추가
 # RM     : V1에서 format.py를 뺀 것
 # CONF   : V1에서 pre-commit.py의 첫 줄을 고친 것
-# CONFJ  : V1에서 statusLine.command를 ".../status-harness.py"로 바꾼 것
+# CONFJ  : V1에서 SessionStart 훅에 timeout 30 을 넣은 것
 # V_SPACE: V1에 payload/claude/scripts/hooks/"이름 있는 훅.py" 를 더한 것
 # V_ROOT : V1에 payload/root/gridfin.json 을 더한 것
 
@@ -238,8 +238,9 @@ t14() {
 t15_desc="JSON도 양쪽이 같은 자리를 다르게 고치면 충돌이다"
 t15() {
   T=$(fresh); cd "$T"
-  #      값 자리에서 충돌을 만든다. 원시 배열은 원소가 곧 식별자라 충돌이 생기지 않는다
-  jq '.statusLine.command = "${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/my-status.py"' \
+  #      값 자리에서 충돌을 만든다. 원시 배열은 원소가 곧 식별자라 충돌이 생기지 않는다.
+  #      식별자(matcher·command)를 그대로 두고 같은 원소 안의 timeout 만 다르게 잡는다
+  jq '.hooks.SessionStart[0].hooks[0].timeout = 60' \
      .claude/settings.json > t.json && mv t.json .claude/settings.json
   BEFORE=$(tree_hash .claude); E=$(entry .harness/manifest.json .claude/settings.json)
   partial  gridfin deploy --from "$CONFJ"

@@ -68,16 +68,17 @@ awk 'NR==1{print "// 하네스가 고친 첫 줄"; next}1' "$_f" > "$CONF/t.py"
 cat "$CONF/t.py" > "$_f" && rm "$CONF/t.py"
 save "$CONF" "conf"
 
-# CONFJ — v1에서 statusLine.command 를 바꾼다 (값 자리 충돌용)
+# CONFJ — v1에서 SessionStart 훅의 timeout 을 넣는다 (값 자리 충돌용)
+#   식별자는 matcher 와 command 인데 둘 다 그대로이므로, 같은 원소 안의 다른 값이 갈린다.
 CONFJ=$(branch confj main)
-jq '.statusLine.command = "${CLAUDE_PROJECT_DIR}/.claude/scripts/hooks/status-harness.py"' \
+jq '.hooks.SessionStart[0].hooks[0].timeout = 30' \
    "$CONFJ/payload/claude/settings.json" > "$CONFJ/t.json"
 mv "$CONFJ/t.json" "$CONFJ/payload/claude/settings.json"
 save "$CONFJ" "confj"
 
 # V_SPACE — 공백과 유니코드가 든 파일 이름
 V_SPACE=$(branch v-space main)
-printf '// #2가 채운다 — 지금은 자리표시본\n// hook: 이름 있는 훅\nprocess.exit(0);\n' \
+printf '#!/usr/bin/env -S uv run --script\n# /// script\n# requires-python = ">=3.11"\n# ///\n# #2가 채운다 — 지금은 자리표시본. hook: 이름 있는 훅\nimport sys\n\nsys.exit(0)\n' \
   > "$V_SPACE/payload/claude/scripts/hooks/이름 있는 훅.py"
 chmod +x "$V_SPACE/payload/claude/scripts/hooks/이름 있는 훅.py"
 save "$V_SPACE" "v-space"

@@ -19,10 +19,6 @@
           "/matcher",
           "/hooks/0/command"
         ]
-      },
-      {
-        "pointer": "/statusLine",
-        "key": null
       }
     ]
   }
