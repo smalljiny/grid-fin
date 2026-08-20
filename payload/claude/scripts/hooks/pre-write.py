@@ -2,16 +2,20 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
-"""커밋 경계 훅 — 선언 설정이 없으면 커밋을 막는다.
+"""쓰기 경계 훅 — 프로젝트 루트 밖 쓰기를 막는다.
 
-**여기서 확정하는 것은 경계 인식과 부재 처리다.** 무엇을 검사할지는 선언 설정
-파일이 담고(이슈 #3), 결과를 판정하는 것은 어댑터다(이슈 #4).
+**차단이 성립하는 지점이다.** `PreToolUse` 의 종료 코드 2는 파일이 생기지 않게
+하고 stderr 가 모델에게 전달된다(1차 실측 2026-08-09).
 
-**부재를 통과가 아니라 차단으로 둔다.** 선언되지 않은 부재는 결손이다. 통과로
-두면 검사가 없는 것과 검사가 통과한 것이 같은 값으로 보인다.
+**여기서 보는 것은 파일 경계 하나다.** 차단하는 계층은 오탐 0% 를 요구하는데
+경로 비교는 오탐이 원리적으로 없다. 금지 패턴과 시크릿은 규칙 목록이 있어야
+하고 그 목록은 선언 설정 파일이 담는다(이슈 #3).
 
-**판정 불가도 막는다.** 셸 문법을 못 읽어 커밋인지 아닌지 모르면 통과시키지
-않는다. 판정 불가를 통과로 두면 그것이 곧 게이트를 지나는 길이 된다.
+**등록 확인도 여기서 한다.** 세션 시작은 막지 못하므로 실제 차단이 이 지점으로
+옮겨져 있다(미결 목록 파일의 S33).
+
+**예외가 나면 막는다.** 차단 훅이 예외에서 통과하면 검사하지 않은 것이 통과한
+것으로 보이고, 그것이 fail-open 이다.
 """
 import json
 import pathlib
@@ -51,28 +55,21 @@ def main() -> int:
 def _run() -> int:
     data = gate.read_input(sys.stdin)
 
-    # **커밋인지 먼저 가른다.** 등록 확인을 앞에 두면 등록이 깨졌을 때
-    # 커밋이 아닌 `Bash` 호출까지 전부 막힌다. **그러면 복구 경로가 막힌다** —
-    # 결손을 고치는 방법이 재배포인데 그것도 `Bash` 로 실행된다.
-    command = (data.get("tool_input") or {}).get("command")
-    verdict = gate.is_commit(command)
-    if verdict is None:
-        _block({"ok": False,
-                "missing": [{"kind": "hook_input",
-                             "path": "명령을 판정할 수 없다: %r" % (command,)}]})
-        return 2
-    if not verdict:
-        return 0
-
     root = gate.project_root(data)
     result = gate.check_registration(root)
     if not result["ok"]:
         _block(result)
         return 2
 
-    if not (root / gate.CONFIG).is_file():
+    target = ((data.get("tool_input") or {}).get("file_path")) or ""
+    if not target:
         _block({"ok": False,
-                "missing": [{"kind": "config", "path": gate.CONFIG}]})
+                "missing": [{"kind": "hook_input", "path": "tool_input.file_path 가 없다"}]})
+        return 2
+
+    if not gate.inside_root(target, root):
+        _block({"ok": False,
+                "missing": [{"kind": "outside_root", "path": target}]})
         return 2
     return 0
 

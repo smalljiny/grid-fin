@@ -529,15 +529,15 @@
   <header>
     <p class="eyebrow">grid fin · 개인용 개발 하네스 · 2026-08-20 · <strong>M0 진행 중</strong></p>
     <h1>grid fin 구현 로드맵</h1>
-    <p class="lede">조사와 설계는 끝났고, 구현이 시작됐습니다. <strong>M0의 네 가지 중 배포 스크립트가 끝났습니다</strong>(<code>bin/gridfin</code>, PR #15, 2026-08-20 머지). 남은 세 가지는 훅 스크립트, 선언 설정 파일, Python 검사 어댑터입니다. 넷이 모두 끝나면 grid fin 저장소에 배포하고, 그 뒤부터는 하네스가 자기 개발 과정에도 적용됩니다.</p>
-    <p class="lede" style="margin-top:8px"><strong>현재 기준선</strong> — 조사 31편, 설계 드래프트 5편, 해소한 미결 51건, 남은 미결 23건입니다(<a href="../draft/open-questions.md">미결 목록 파일</a>의 항목 수). <strong>이 문서는 일정표가 아니라 실행 순서를 정리한 로드맵입니다.</strong> 개인 프로젝트 규모에서는 통계적으로 설계를 검증하기 어렵기 때문에(<a href="../research/evaluation.md">평가 조사 §1.5</a>), 실제 검증은 워크플로를 처음부터 끝까지 한 번 실행하는 M1에서 시작합니다.</p>
+    <p class="lede">조사와 설계는 끝났고, 구현이 시작됐습니다. <strong>M0의 네 가지 중 배포 스크립트와 훅 스크립트가 끝났습니다</strong>(<code>bin/gridfin</code> · 이슈 #1 · PR #15, 그리고 훅 4개와 <code>bin/gridfin-inject</code> · 이슈 #2 · PR #16). 남은 두 가지는 선언 설정 파일과 Python 검사 어댑터입니다. 넷이 모두 끝나면 grid fin 저장소에 배포하고, 그 뒤부터는 하네스가 자기 개발 과정에도 적용됩니다.</p>
+    <p class="lede" style="margin-top:8px"><strong>현재 기준선</strong> — 조사 31편, 설계 드래프트 5편, 해소한 미결 54건, 남은 미결 23건입니다(<a href="../draft/open-questions.md">미결 목록 파일</a>의 항목 수). <strong>이 문서는 일정표가 아니라 실행 순서를 정리한 로드맵입니다.</strong> 개인 프로젝트 규모에서는 통계적으로 설계를 검증하기 어렵기 때문에(<a href="../research/evaluation.md">평가 조사 §1.5</a>), 실제 검증은 워크플로를 처음부터 끝까지 한 번 실행하는 M1에서 시작합니다.</p>
 
     <!-- ══ HERO 진행 상황 ══ -->
     <div class="orbit">
       <div class="orbit-head">
         <h2>진행 상황</h2>
         <span class="tag">설계부터 M4까지 · 관문 3개</span>
-        <span class="pct"><b>1 / 5</b> 구간 (설계 완료 · M0 1/4)</span>
+        <span class="pct"><b>1 / 5</b> 구간 (설계 완료 · M0 2/4)</span>
       </div>
 
       <div class="rail-box">
@@ -559,10 +559,10 @@
           </div>
 
           <div class="st wip now">
-            <div class="node">1/4</div>
+            <div class="node">2/4</div>
             <div class="st-id">M0</div>
             <div class="st-lbl">기반 만들기</div>
-            <div class="st-bar"><i style="width:25%"></i></div>
+            <div class="st-bar"><i style="width:50%"></i></div>
           </div>
 
           <div class="st gate locked">
@@ -627,15 +627,15 @@
     <div class="status">
       <div class="s-card past">
         <div class="s-k">완료한 일</div>
-        <div class="s-t">설계와 배포 스크립트</div>
-        <p class="s-d"><a href="../draft/overview.html">설계 드래프트 5편</a>에서 계층 4개, 상태 5개, 판정 4상태, 어댑터 슬롯 5개, 실행 단계 14개를 정리했습니다. 그 위에서 <strong>M0의 첫 산출물인 배포 스크립트가 끝났습니다.</strong> 시험 50개가 통과합니다.</p>
+        <div class="s-t">설계와 M0 앞의 둘</div>
+        <p class="s-d"><a href="../draft/overview.html">설계 드래프트 5편</a>에서 계층 4개, 상태 5개, 판정 4상태, 어댑터 슬롯 5개, 실행 단계 14개를 정리했습니다. 그 위에서 <strong>M0의 앞의 둘이 끝났습니다 — 배포 스크립트와 훅 스크립트입니다.</strong> 시험 94개가 통과합니다(배포 50 · 훅 32 · 주입 10 · 통합 2).</p>
       </div>
       <div class="s-card here">
         <div class="s-k">지금 할 일 — M0</div>
         <div class="s-t">최소 기반 네 가지</div>
         <ul class="s-list">
           <li class="is-done">배포 스크립트</li>
-          <li>훅 스크립트 네 개</li>
+          <li class="is-done">훅 스크립트 네 개</li>
           <li>선언 설정 파일</li>
           <li>Python 검사 어댑터 하나</li>
         </ul>
@@ -758,7 +758,7 @@
             <div class="kv"><span class="k">핵심</span><span class="v">계층 4개 · 상태 5개 · 하드 차단 7개 · 실행 14단계 · 정본 4개</span></div>
           </div>
           <div class="card d">
-            <div class="card-top"><span class="chip d">완료</span><span class="card-title">미결 51건 해소</span></div>
+            <div class="card-top"><span class="chip d">완료</span><span class="card-title">미결 54건 해소</span></div>
             <div class="kv"><span class="k">남음</span><span class="v">23건 — <strong>착수를 막는 것은 0건</strong></span></div>
             <div class="kv rest"><span class="k">최근 결정</span><span class="v">배포 갱신 규칙 · 작업 스펙 추적 · 기존 하네스 차용 판정 · 하네스가 쓰는 언어</span></div>
           </div>
@@ -770,7 +770,7 @@
           <span class="ms-id">M0</span>
           <span class="ms-name">기반 만들기</span>
           <span class="ms-now">지금</span>
-          <span class="ms-meta">하네스가 없는 상태에서 작성 · 1/4</span>
+          <span class="ms-meta">하네스가 없는 상태에서 작성 · 2/4</span>
         </div>
         <div class="cards">
           <div class="card d">
@@ -781,9 +781,11 @@
             <div class="kv rest"><span class="k">이유</span><span class="v">배포가 되어야 훅을 설정에 등록할 수 있고, 훅이 등록되어야 이후 작업을 강제할 수 있습니다</span></div>
           </div>
           <div class="card t">
-            <div class="card-top"><span class="chip t">미착수</span><span class="card-title">훅 스크립트 네 개</span></div>
-            <div class="kv"><span class="k">대상</span><span class="v">세션 시작 · 파일 쓰기 직전 · 커밋 직전 · 파일을 쓴 뒤 포맷</span></div>
-            <div class="kv rest"><span class="k">방식</span><span class="v">네 훅을 따로 켜지 않습니다. 훅 등록 확인은 네 훅이 모두 설정에 등록되어야 통과합니다</span></div>
+            <div class="card-top"><span class="chip d">완료</span><span class="card-title">훅 스크립트 네 개</span></div>
+            <div class="kv"><span class="k">결과</span><span class="v">사건 3개에 훅 4개 — 세션 시작 · 파일 쓰기 직전 · 커밋 직전 · 파일을 쓴 뒤 포맷. 훅 3개가 함께 쓰는 <code>gate.py</code> 와 워크트리 주입 스크립트 <code>bin/gridfin-inject</code> 도 함께 만들었습니다(이슈 #2, PR #16)</span></div>
+            <div class="kv rest"><span class="k">방식</span><span class="v">네 훅을 따로 켜지 않습니다. 훅 등록 확인은 네 훅이 모두 설정에 등록되어야 통과합니다. <strong>기대 목록은 매니페스트에서 나옵니다</strong> — 배포 대상이 늘어도 고칠 곳이 늘지 않습니다</span></div>
+            <div class="kv rest"><span class="k">수정</span><span class="v"><strong>세션 시작에서는 차단이 성립하지 않습니다</strong>(1차 실측). 종료 코드 2로 끝내도 세션이 진행되고 <code>stderr</code> 가 모델에게 도달하지 않습니다. <strong>하드 차단은 7개 그대로이고 강제 지점이 쓰기 경계와 커밋 경계로 옮겨졌습니다</strong>(미결 목록 S33)</span></div>
+            <div class="kv rest"><span class="k">조건</span><span class="v">시험 44개가 통과합니다 — 단위 42개와 통합 2개입니다. 통합은 실제 세션에서 도구 호출이 진행되지 않은 것을 봅니다</span></div>
             <div class="kv rest"><span class="k">제약</span><span class="v">하네스가 만드는 실행물은 bash와 uv 기반 Python뿐입니다. Node를 쓰지 않습니다. 훅은 <code>#!/usr/bin/env -S uv run --script</code> 셔뱅으로 부르고, 설정에는 경로만 적습니다</span></div>
           </div>
           <div class="card t">
@@ -998,12 +1000,12 @@
       <div class="next-card is-done">
         <div class="next-n">1 · 완료</div>
         <div class="next-t">배포 스크립트</div>
-        <p class="next-d">나머지 세 작업이 이 배포 스크립트 위에 올라갑니다. 배포 대상 8가지는 설계 §7-4에 있고, <strong>M0에서 넣는 것은 다섯입니다.</strong> 훅 스크립트, 훅 선언, 권한 허용 목록, 선언 설정, 매니페스트입니다. 스킬과 검토용 에이전트는 M2에서 늘어납니다. 지금 <code>payload/</code>에 들어 있는 것은 훅 선언과 권한 허용 목록이고, 훅 스크립트는 2번이 채울 자리표시본입니다.</p>
+        <p class="next-d">나머지 세 작업이 이 배포 스크립트 위에 올라갑니다. 배포 대상 8가지는 설계 §7-4에 있고, <strong>M0에서 넣는 것은 다섯입니다.</strong> 훅 스크립트, 훅 선언, 권한 허용 목록, 선언 설정, 매니페스트입니다. 스킬과 검토용 에이전트는 M2에서 늘어납니다. 훅 스크립트 4개와 훅이 함께 쓰는 코드는 2번이 채웠고, <code>payload/root/</code> 의 선언 설정은 3번이 만듭니다.</p>
       </div>
       <div class="next-card">
-        <div class="next-n">2</div>
+        <div class="next-n">2 · 완료</div>
         <div class="next-t">훅 스크립트 네 개</div>
-        <p class="next-d">종료 코드 2가 실제 차단으로 동작하고, 종료 코드 0의 메시지는 모델에게 전달되지 않는다는 점은 이미 확인했습니다. 따라서 알리기만 하는 훅은 만들지 않습니다.</p>
+        <p class="next-d">쓰기 경계와 커밋 경계는 종료 코드 2로 막고, 세션 시작과 포맷은 도달이 확인된 채널로 알립니다. <strong>세션 시작이 막지 못하는 것은 이 이슈에서 재서 알았습니다</strong> — 차단 지점을 옮겼습니다.</p>
       </div>
       <div class="next-card">
         <div class="next-n">3</div>
