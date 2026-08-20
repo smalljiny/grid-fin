@@ -25,6 +25,25 @@ EVENT = "SessionStart"
 
 
 def main() -> int:
+    """예상 밖 예외가 나도 종료 코드 2로 새지 않는다.
+
+    「어느 경우에도」는 열거로 보장되지 않는다. 바깥에서 모든 예외를 잡고
+    **0을 돌려주는 경로를 하나로 만든다.** 다만 조용히 지나가지 않는다 —
+    무슨 일이 났는지 결손으로 실어 보낸다.
+    """
+    try:
+        return _run()
+    except BaseException as exc:   # noqa: BLE001 — 여기서 새면 차단으로 오인된다
+        try:
+            _report({"ok": False,
+                     "missing": [{"kind": "hook_error",
+                                  "path": "%s: %s" % (type(exc).__name__, exc)}]})
+        except BaseException:      # noqa: BLE001 — 보고조차 실패해도 막지 않는다
+            pass
+        return 0
+
+
+def _run() -> int:
     try:
         data = gate.read_input(sys.stdin)
     except gate.BadInput as exc:

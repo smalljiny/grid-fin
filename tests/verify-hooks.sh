@@ -311,6 +311,29 @@ c9() {
   #      ⓔ 설정 파일 자체가 없다
   T4=$(deployed); rm "$T4/.claude/settings.json"
   run_session_start "$T4" > /dev/null; test "$(hook_rc)" != 2
+
+  #      ⓕ 열거하지 않은 경우. 「어느 경우에도」를 열거로 재면 예상 밖 예외가
+  #      2로 새는 구현이 통과한다. 공용 모듈이 예외를 던지게 만들어 확인한다
+  T5=$(deployed)
+  printf 'raise RuntimeError("일부러 낸 예외")\n' >> "$T5/.claude/scripts/gridfin/gate.py"
+  run_session_start "$T5" > /dev/null; test "$(hook_rc)" != 2
+
+  #      ⓖ 공용 모듈 자체가 없다 — import 가 실패한다
+  T6=$(deployed); rm "$T6/.claude/scripts/gridfin/gate.py"
+  run_session_start "$T6" > /dev/null; test "$(hook_rc)" != 2
+
+  #      ⓗ 예외가 나도 조용히 지나가지 않는다. 결손으로 실려 나온다
+  T7=$(deployed)
+  python3 - "$T7/.claude/scripts/gridfin/gate.py" <<'PY'
+import io, sys
+p = sys.argv[1]
+s = io.open(p, encoding="utf-8").read()
+s = s.replace("def check_registration(", "def check_registration(*_a, **_k):\n    raise RuntimeError('일부러')\n\n\ndef _unused(", 1)
+io.open(p, "w", encoding="utf-8").write(s)
+PY
+  g=$(run_session_start "$T7" | gate_json)
+  test "$(hook_rc)" != 2
+  printf '%s' "$g" | jq -e '.ok == false' > /dev/null
 }
 
 c16_desc="C16 사용자가 더한 훅 선언이 있어도 등록 확인이 통과한다"
