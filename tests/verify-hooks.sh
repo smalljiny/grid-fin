@@ -85,24 +85,34 @@ t1() {
 
 t2_desc="C2 훅 스크립트 4개가 uv 셔뱅으로 직접 실행되고, stdin 의 JSON 을 읽어 종료한다"
 t2() {
+  S="$P/claude/settings.json"
+  in="$GRIDFIN_RUN/probe.json"
+  printf '%s' '{"hook_event_name":"Probe","cwd":"/tmp"}' > "$in"
+
+  #      디렉터리를 훑지 않는다. settings.json 이 선언한 경로에서 뽑는다 —
+  #      선언이 다른 파일을 가리켜도 디렉터리에 넷이 남아 있으면 통과하기 때문이다
   n=0
-  for f in "$P/claude/scripts/hooks/"*.py; do
+  while IFS= read -r p; do
+    f="$P/claude/${p#.claude/}"
+    test -f "$f"
     #      실행 비트가 없으면 셔뱅이 뜻이 없다
     test -x "$f"
     head -1 "$f" | grep -qF '#!/usr/bin/env -S uv run --script'
     #      직접 실행된다. stdin 에 JSON 을 넣고 걸리지 않는지 본다.
     #      종료 코드는 훅마다 다르므로 여기서 보지 않는다 — 실행 자체를 잰다.
     #      파이프 대신 파일로 넣는다. bounded 가 배경으로 돌리므로 stdin 을 물려받아야 한다
-    in="$GRIDFIN_RUN/probe.json"
-    printf '%s' '{"hook_event_name":"Probe","cwd":"/tmp"}' > "$in"
     rc=0
     bounded 60 "$f" < "$in" >/dev/null 2>&1 || rc=$?
     test "$rc" != 124   # 타임아웃이면 stdin 을 안 읽고 매달린 것이다
     test "$rc" != 126   # 실행 불가
     test "$rc" != 127   # 셔뱅이 풀리지 않았다
     n=$((n+1))
-  done
+  done < <(declared_paths "$S")
   test "$n" = 4
+
+  #      선언되지 않은 훅 스크립트가 디렉터리에 남아 있지 않다.
+  #      남으면 등록 확인의 기대 목록에 들어가 자기 자신을 결손으로 잡는다(스펙 §3.3)
+  test "$(find "$P/claude/scripts/hooks" -maxdepth 1 -type f | wc -l | tr -d ' ')" = 4
 }
 
 t3_desc="C4 rules.json 의 소유 지점 4개와 식별자 유일성"
