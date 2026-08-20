@@ -27,9 +27,36 @@ OK, PARTIAL, REJECTED = 0, 1, 2
 MAPPING = {"claude": ".claude", "root": ""}
 
 
-def die(reason: str) -> int:
-    print(f"거부: {reason}", file=sys.stderr)
+# --json 은 부르는 쪽이 구조로 읽는 유일한 계약이다. 사람이 읽는 줄은 계약이 아니라
+# 표준 오류로만 나간다 — 문구를 다듬을 때마다 검증이 깨지면 안 된다.
+OUT: dict = {"json": False, "files": []}
+
+
+def emit(outcome: str, reason: str | None) -> None:
+    if not OUT["json"]:
+        return
+    doc: dict = {"outcome": outcome}
+    if reason:
+        doc["reason"] = reason
+    doc["files"] = OUT["files"]
+    print(json.dumps(doc, ensure_ascii=False, indent=2))
+
+
+def die(code: str | None, detail: str) -> int:
+    """전체 거부. 한 번만 낸다 — 여기서 내고 부르는 쪽은 코드만 돌려준다."""
+    print(f"거부: {code + ' — ' if code else ''}{detail}", file=sys.stderr)
+    OUT["files"] = []           # 전체 거부는 아무것도 안 했으므로 목록이 없다
+    emit("rejected", code)
     return REJECTED
+
+
+def report_of(p: dict) -> dict:
+    d = {"dest": p["dest"], "status": p["status"]}
+    if p.get("detail"):
+        d["detail"] = p["detail"]
+    if p["status"] == "conflict":
+        d["merged"] = p["dest"] + ".merged"
+    return d
 
 
 def git(repo: Path, *args: str) -> bytes:
@@ -106,20 +133,23 @@ def read_manifest(target: Path) -> dict:
         return {}
 
 
-def resolve_source(target: Path, from_arg: str | None) -> tuple[Path | None, str]:
-    """--from → 매니페스트의 source.path → source.remote 순으로 찾는다."""
+def resolve_source(target: Path, from_arg: str | None) -> tuple[Path | None, str, str]:
+    """--from → 매니페스트의 source.path → source.remote 순으로 찾는다.
+
+    실패는 전부 no_source 다. 어디서 못 찾았는지는 사람이 읽는 쪽에만 적는다.
+    """
     if from_arg:
         p = Path(from_arg).expanduser().resolve()
-        return (p, "") if is_repo(p) else (None, f"--from 이 git 저장소가 아니다: {p}")
+        return (p, "", "") if is_repo(p) else (None, "no_source", f"--from 이 git 저장소가 아니다: {p}")
     src = read_manifest(target).get("source", {})
     if src.get("path"):
         p = Path(src["path"])
         if is_repo(p):
-            return p, ""
+            return p, "", ""
     if src.get("remote"):
         # T2는 fetch 를 만들지 않는다. 여기까지 왔다는 것은 경로가 죽었다는 뜻이다.
-        return None, "source.remote 로 가져오는 것은 아직 만들지 않았다"
-    return None, "no_source — 첫 배포에는 --from 이 필요하다"
+        return None, "no_source", "source.remote 로 가져오는 것은 아직 만들지 않았다"
+    return None, "no_source", "첫 배포에는 --from 이 필요하다"
 
 
 def payload_entries(harness: Path, sha: str) -> list[tuple[str, str, str]]:
@@ -224,7 +254,7 @@ def index_by_identity(arr, key, where: str, pointer: str) -> dict:
     for el in arr:
         i = identity(el, key)
         if i in out:
-            raise Rejected(f"{pointer} 의 식별자가 {where} 에서 유일하지 않다")
+            raise Rejected("duplicate_identifier", f"{pointer} 의 식별자가 {where} 에서 유일하지 않다")
         out[i] = el
     return out
 
@@ -268,7 +298,7 @@ def check_owned(doc, owned: list, dest: str) -> None:
             if i in seen:
                 # payload 자체가 중복을 담았다. 그 파일만의 문제가 아니라
                 # 하네스가 잘못된 것이므로 전체 거부다.
-                raise Rejected(f"duplicate_identifier — {dest} 의 {rule['pointer']}")
+                raise Rejected("duplicate_identifier", f"{dest} 의 {rule['pointer']}")
             seen.add(i)
 
 
@@ -300,7 +330,8 @@ def merge_text(live: Path, base: bytes, theirs: bytes, tmp: Path) -> tuple[bytes
     r = subprocess.run(["git", "merge-file", "-p", str(live), str(bp), str(tp)],
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if r.returncode == 255 or r.returncode < 0:
-        raise Rejected(f"git merge-file 이 실패했다: {r.stderr.decode(errors='replace').strip()}")
+        # 계약의 reason 목록에 이 경우가 없다. 없는 값을 지어내지 않고 비운다(미결).
+        raise Rejected(None, f"git merge-file 이 실패했다: {r.stderr.decode(errors='replace').strip()}")
     return r.stdout, r.returncode != 0
 
 
@@ -312,16 +343,16 @@ def deploy(target: Path, from_arg: str | None) -> int:
     것도 같은 이유다. 잠금이 .harness/ 를 만든다.
     """
     if not is_repo(target):
-        return die("not_a_git_repo — 대상이 git 저장소가 아니다")
+        return die("not_a_git_repo", "대상이 git 저장소가 아니다")
 
-    harness, why = resolve_source(target, from_arg)
+    harness, code, why = resolve_source(target, from_arg)
     if harness is None:
-        return die(why)
+        return die(code, why)
 
     # dirty 하면 HEAD 가 실제로 쓴 내용을 가리키지 않는다. 범위를 payload/ 로 좁힌다 —
     # 문서를 고치는 중이라고 배포를 막을 이유가 없다.
     if git(harness, "status", "--porcelain", "--", "payload/").strip():
-        return die("harness_dirty — 하네스의 payload/ 에 커밋되지 않은 변경이 있다")
+        return die("harness_dirty", "하네스의 payload/ 에 커밋되지 않은 변경이 있다")
 
     lock = target / ".harness" / "deploy.lock"
     try:
@@ -329,13 +360,13 @@ def deploy(target: Path, from_arg: str | None) -> int:
     except OSError as e:
         # 스펙 §3.8 이 전체 거부로 정한 자리다. 안 잡으면 traceback 과 함께 1 로
         # 나가고, 부르는 쪽은 그것을 부분 실패로 읽는다(교차 검토 실측).
-        return die(f"no_permission — 대상 루트에 쓸 수 없다: {e}")
+        return die("no_permission", f"대상 루트에 쓸 수 없다: {e}")
     try:
         lock.mkdir()        # exist_ok 를 주면 안 된다. 이 한 번이 원자적 획득이다
     except FileExistsError:
-        return die("lock_busy — 다른 배포가 이 대상을 잡고 있다")
+        return die("lock_busy", "다른 배포가 이 대상을 잡고 있다")
     except OSError as e:
-        return die(f"no_permission — 잠금을 만들 수 없다: {e}")
+        return die("no_permission", f"잠금을 만들 수 없다: {e}")
     try:
         return run_deploy(target, harness)
     finally:
@@ -408,7 +439,7 @@ def run_deploy(target: Path, harness: Path) -> int:
                          "detail": "base 를 못 꺼냈다", "entry": old})
             continue
         if sha256(base) != old["sourceHash"]:
-            return die(f"source_hash_mismatch — {dest} 의 base 가 그때 배포한 것과 다르다")
+            return die("source_hash_mismatch", f"{dest} 의 base 가 그때 배포한 것과 다르다")
 
         cur = live.read_bytes()
         try:
@@ -474,7 +505,11 @@ def run_deploy(target: Path, harness: Path) -> int:
     try:
         write_exclude(target, exclude_entries(target, seen))
     except OSError as e:
-        raise Rejected(f"exclude_write_failed — 무시 목록을 못 썼다: {e}")
+        raise Rejected("exclude_write_failed", f"무시 목록을 못 썼다: {e}")
+
+    # 보고물은 여기서 만든다. 짧게 끊는 경로에서도 파일 목록은 나와야 하고,
+    # 매니페스트에서 만들면 「다시 쓰지 않는」 경로에서 비어 버린다.
+    OUT["files"] = sorted((report_of(p) for p in plan), key=lambda d: d["dest"])
 
     # ── 2단계. 바뀐 것이 없으면 아무것도 쓰지 않는다.
     # 삭제는 파일이 이미 없더라도 매니페스트에서 항목을 빼야 하므로 changed 다.
@@ -535,7 +570,15 @@ def run_deploy(target: Path, harness: Path) -> int:
 
 
 class Rejected(Exception):
-    """전체 거부로 끝낼 사유. 종료 코드 2로 나간다."""
+    """전체 거부로 끝낼 사유. 종료 코드 2로 나간다.
+
+    code 는 계약의 reason 값이고, 목록에 없는 경우에는 None 이다.
+    """
+
+    def __init__(self, code: str | None, detail: str):
+        super().__init__(detail)
+        self.code = code
+        self.detail = detail
 
 
 def main(argv: list[str]) -> int:
@@ -555,18 +598,21 @@ def main(argv: list[str]) -> int:
         if rest[0] == "--from" and len(rest) > 1:
             from_arg, rest = rest[1], rest[2:]
         elif rest[0] == "--json":
-            rest = rest[1:]                 # T6 이 만든다. 지금은 받기만 한다
+            OUT["json"], rest = True, rest[1:]
         else:
-            return die(f"모르는 인자: {rest[0]}")
+            return die(None, f"모르는 인자: {rest[0]}")
     try:
-        return deploy(Path.cwd(), from_arg)
+        rc = deploy(Path.cwd(), from_arg)
     except Rejected as e:
-        return die(str(e))
+        return die(e.code, e.detail)
     except subprocess.CalledProcessError as e:
         # git 이 실패하면 하네스 입력이 잘못된 것이다. 1은 부분 실패라는 뜻이라
         # 여기로 새면 부르는 쪽이 두 상황을 구별하지 못한다.
         err = (e.stderr or b"").decode(errors="replace").strip()
-        return die(f"git 이 실패했다 — {' '.join(e.cmd[:4])}\n{err}")
+        return die(None, f"git 이 실패했다 — {' '.join(e.cmd[:4])}\n{err}")
+    if rc != REJECTED:              # 거부는 die 가 이미 냈다. 두 번 내면 안 된다
+        emit("partial" if rc == PARTIAL else "success", None)
+    return rc
 
 
 if __name__ == "__main__":
