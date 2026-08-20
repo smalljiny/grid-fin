@@ -130,11 +130,23 @@ def put(main: pathlib.Path, worktree: pathlib.Path, dest: str) -> str | None:
 
 
 def ignored(worktree: pathlib.Path, dests: list[str]) -> list[str]:
-    """무시되지 않는 항목을 돌려준다. **쓰지 않고 확인만 한다.**"""
-    dirty = set()
-    for line in git(worktree, "status", "--porcelain", "--untracked-files=all").splitlines():
-        dirty.add(line[3:].strip().strip('"'))
-    return [d for d in dests if d in dirty]
+    """무시되지 않는 항목을 돌려준다. **쓰지 않고 확인만 한다.**
+
+    **`git status` 를 파싱하지 않는다.** 상태 글자는 두 칸이고 앞자리가 공백일 수
+    있는데(` M`), 출력을 `strip()` 하면 **첫 줄의 경로가 두 글자 밀린다.** 그리고
+    이름 변경은 `R  옛것 -> 새것` 형태라 경로가 하나가 아니다. 둘 다 실제로 잘못
+    잘렸다(1차 실측 2026-08-20).
+
+    **`git ls-files --others --exclude-standard` 가 곧 답이다** — 추적되지 않고
+    무시되지도 않는 것, 즉 `git status` 에 뜰 것만 낸다. 추적되는 항목은 애초에
+    건너뛰므로(`put`) 여기서도 대상이 아니다.
+    """
+    out = subprocess.run(
+        ["git", "-C", str(worktree), "ls-files", "--others",
+         "--exclude-standard", "-z"],
+        capture_output=True, check=True)
+    visible = {x for x in out.stdout.decode().split("\0") if x}
+    return [d for d in dests if d in visible]
 
 
 def main(argv: list[str]) -> int:

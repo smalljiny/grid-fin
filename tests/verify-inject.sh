@@ -109,6 +109,11 @@ c32() {
   W=$(worktree_of "$M")
   printf '{"사용자":"고친 것"}\n' > "$W/.claude/settings.json"
   before=$(shasum -a 256 < "$W/.claude/settings.json")
+  #      추적되는 항목이 수정 상태여도 완전 성공이다.
+  #      status 를 파싱하면 이 줄의 경로가 두 글자 밀려 엉뚱한 판정이 나온다
+  inject "$W" > /dev/null
+  #      이름이 바뀐 파일이 있어도 마찬가지다 — R  옛것 -> 새것 형태다
+  ( cd "$W" && git mv f.txt g.txt )
   inject "$W" > /dev/null
   #      추적되는 파일은 건드리지 않는다. 덮으면 사용자의 커밋된 파일이 바뀐다
   test "$(shasum -a 256 < "$W/.claude/settings.json")" = "$before"
@@ -214,6 +219,19 @@ c37() {
   : > "$common/info/exclude"
   partial inject "$W2"
   test -f "$W2/.claude/settings.json"
+
+  #      경로에 공백과 유니코드가 있어도 찾아낸다.
+  #      git status 를 파싱하면 이 경로가 따옴표와 8진 이스케이프로 나와
+  #      매니페스트의 dest 와 맞지 않는다 — 안 뜨는 것으로 잘못 판정한다
+  M3=$(main_repo); W3=$(worktree_of "$M3")
+  n=".claude/scripts/hooks/이름 있는 훅.py"
+  printf 'x\n' > "$M3/$n"
+  jq --arg d "$n" '.files += [{"dest":$d}]' "$M3/.harness/manifest.json" > "$M3/t.json"
+  mv "$M3/t.json" "$M3/.harness/manifest.json"
+  common=$(git -C "$W3" rev-parse --git-common-dir)
+  : > "$common/info/exclude"
+  inject "$W3" > "$GRIDFIN_RUN/out3.txt" 2>&1 || true
+  grep -q '이름 있는 훅.py' "$GRIDFIN_RUN/out3.txt"
 }
 
 # ── 실행기 ────────────────────────────────────────────────
