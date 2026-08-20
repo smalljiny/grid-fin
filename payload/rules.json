@@ -1,0 +1,29 @@
+{
+  "claude/settings.json": {
+    "merge": "json",
+    "owned": [
+      {
+        "pointer": "/permissions/allow",
+        "key": null
+      },
+      {
+        "pointer": "/hooks/PreToolUse",
+        "key": [
+          "/matcher",
+          "/hooks/0/command"
+        ]
+      },
+      {
+        "pointer": "/hooks/SessionStart",
+        "key": [
+          "/matcher",
+          "/hooks/0/command"
+        ]
+      },
+      {
+        "pointer": "/statusLine",
+        "key": null
+      }
+    ]
+  }
+}

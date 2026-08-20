@@ -1,0 +1,666 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# ///
+"""gridfin — 하네스 배포 도구.
+
+종료 코드는 셋이다. 0 완전 성공 · 1 부분 실패 · 2 전체 거부.
+세부 원인은 종료 코드가 아니라 --json 이 담는다(T6에서 만든다).
+
+지금 있는 것은 T2까지다 — 배포와 매니페스트와 종료 코드.
+병합은 T3, 삭제는 T4, 저장소 접점의 안전 조건은 T5가 만든다.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import signal
+import subprocess
+import sys
+from pathlib import Path
+
+OK, PARTIAL, REJECTED = 0, 1, 2
+
+# payload 의 하위 디렉터리가 대상의 어디로 가는가. 최상위 파일은 목적지가 없어
+# 배포되지 않는다 — payload/rules.json 이 그래서 안전하다.
+MAPPING = {"claude": ".claude", "root": ""}
+
+
+# --json 은 부르는 쪽이 구조로 읽는 유일한 계약이다. 사람이 읽는 줄은 계약이 아니라
+# 표준 오류로만 나간다 — 문구를 다듬을 때마다 검증이 깨지면 안 된다.
+OUT: dict = {"json": False, "files": []}
+
+
+def emit(outcome: str, reason: str | None, files: list) -> None:
+    """목록을 인자로 받는다. 전역에서 읽으면 「아직 안 쓴 계획」이 결과처럼 샌다."""
+    if not OUT["json"]:
+        return
+    doc: dict = {"outcome": outcome}
+    if reason:
+        doc["reason"] = reason
+    doc["files"] = files
+    print(json.dumps(doc, ensure_ascii=False, indent=2))
+
+
+def die(code: str | None, detail: str) -> int:
+    """전체 거부. 한 번만 낸다 — 여기서 내고 부르는 쪽은 코드만 돌려준다.
+
+    목록은 언제나 비운다. 아무것도 쓰지 않았으므로 보고할 파일이 없다.
+    """
+    print(f"거부: {code + ' — ' if code else ''}{detail}", file=sys.stderr)
+    emit("rejected", code, [])
+    return REJECTED
+
+
+def report_of(p: dict) -> dict:
+    d = {"dest": p["dest"], "status": p["status"]}
+    if p.get("code"):
+        d["code"] = p["code"]
+    if p.get("detail"):
+        d["detail"] = p["detail"]
+    if p["status"] == "conflict":
+        d["merged"] = p["dest"] + ".merged"
+    return d
+
+
+def git(repo: Path, *args: str) -> bytes:
+    return subprocess.run(
+        ["git", "-C", str(repo), *args],
+        check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    ).stdout
+
+
+def is_repo(path: Path) -> bool:
+    """워크트리의 .git 은 디렉터리가 아니라 파일이라 test -d 가 틀린다(실측).
+    베어 저장소 안에서는 종료 코드가 0이면서 false 를 내므로 출력까지 본다."""
+    try:
+        return git(path, "rev-parse", "--is-inside-work-tree").decode().strip() == "true"
+    except (subprocess.CalledProcessError, FileNotFoundError, NotADirectoryError):
+        return False
+
+
+EXCLUDE_BEGIN = "# gridfin: begin — 하네스가 주입한 것만 관리한다"
+EXCLUDE_END = "# gridfin: end"
+
+
+def exclude_entries(target: Path, dests) -> list[str]:
+    """무시 목록에 넣을 항목. 주입한 것만 넣고 이미 추적되는 것은 뺀다(S26)."""
+    out = {".harness/"}
+    for d in dests:
+        # payload/root/ 는 저장소 루트에 파일을 놓는다. 감쌀 디렉터리가 없으므로
+        # 그 파일 이름을 그대로 넣는다 — 디렉터리 항목으로 뭉뚱그리면 저장소 전체를 덮는다.
+        out.add(d.split("/")[0] + "/" if "/" in d else d)
+    keep = [e for e in sorted(out)
+            if not git(target, "ls-files", "--", e.rstrip("/")).strip()]
+    # 앞에 / 를 붙여 저장소 루트에 고정한다. gitignore 에서 앵커 없는 이름은
+    # 모든 깊이의 같은 이름에 걸려, sub/gridfin.json 까지 숨었다(교차 검토 실측).
+    return ["/" + e for e in keep]
+
+
+def write_exclude(target: Path, entries: list[str]) -> None:
+    """저장소 공용 exclude 의 관리 블록만 다시 쓴다.
+
+    워크트리 전용 exclude 는 git 이 읽지 않는다(실측, 두 번 확인). 그래서 경로를
+    --git-common-dir 로 푼다. 이 파일은 사용자도 고치므로 블록 밖은 건드리지 않는다.
+    """
+    common = Path(git(target, "rev-parse", "--git-common-dir").decode().strip())
+    if not common.is_absolute():
+        common = target / common
+    p = common / "info" / "exclude"
+    old = p.read_text(encoding="utf-8") if p.is_file() else ""
+    block = "\n".join([EXCLUDE_BEGIN, *entries, EXCLUDE_END]) + "\n"
+    i = old.find(EXCLUDE_BEGIN)
+    if i >= 0:
+        j = old.find(EXCLUDE_END, i)
+        j = len(old) if j < 0 else j + len(EXCLUDE_END)
+        if old[j:j + 1] == "\n":
+            j += 1
+        new = old[:i] + block + old[j:]
+    else:
+        new = old + ("" if not old or old.endswith("\n") else "\n") + block
+    if new != old:                  # 두 번째 배포가 블록을 또 붙이면 안 된다
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(new, encoding="utf-8")
+
+
+def sha256(data: bytes) -> str:
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def read_manifest(target: Path) -> dict:
+    p = target / ".harness" / "manifest.json"
+    if not p.is_file():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+
+
+def check_manifest(target: Path, manifest: dict) -> None:
+    """모든 목적지가 프로젝트 안인지 본다. 하나라도 밖이면 전체 거부다.
+
+    하네스는 프로젝트 밖의 파일을 다루지 않는다. 배포하는 쪽의 목적지는
+    git ls-tree 가 만들어 밖을 가리킬 수 없고, 지우는 쪽만 이 파일에서 받는다.
+    밖을 가리키는 항목은 사람이 고쳤거나 깨졌거나 남의 것이라는 뜻이고,
+    그러면 같은 파일의 나머지 항목도 믿을 수 없다 — sourceHash 불일치와 같은 층이다.
+
+    지우는 지점이 아니라 읽는 지점에서 본다. 나중에 목적지를 쓰는 코드가 늘어도
+    자동으로 덮인다.
+    """
+    for f in manifest.get("files", []):
+        dest = f.get("dest", "")
+        if escapes(dest):
+            raise Rejected("manifest_invalid",
+                           f"{dest or '(빈 경로)'} 가 프로젝트 밖을 가리킨다")
+
+
+def resolve_source(target: Path, from_arg: str | None) -> tuple[Path | None, str, str]:
+    """--from → 매니페스트의 source.path → source.remote 순으로 찾는다.
+
+    실패는 전부 no_source 다. 어디서 못 찾았는지는 사람이 읽는 쪽에만 적는다.
+    """
+    if from_arg:
+        p = Path(from_arg).expanduser().resolve()
+        return (p, "", "") if is_repo(p) else (None, "no_source", f"--from 이 git 저장소가 아니다: {p}")
+    src = read_manifest(target).get("source", {})
+    if src.get("path"):
+        p = Path(src["path"])
+        if is_repo(p):
+            return p, "", ""
+    if src.get("remote"):
+        # T2는 fetch 를 만들지 않는다. 여기까지 왔다는 것은 경로가 죽었다는 뜻이다.
+        return None, "no_source", "source.remote 로 가져오는 것은 아직 만들지 않았다"
+    return None, "no_source", "첫 배포에는 --from 이 필요하다"
+
+
+def payload_entries(harness: Path, sha: str) -> list[tuple[str, str, str]]:
+    """(mode, src, dest) 목록. git 이 이름과 모드의 원천이다."""
+    out = git(harness, "ls-tree", "-r", "-z", sha, "payload/")
+    entries = []
+    for rec in out.split(b"\0"):
+        if not rec:
+            continue
+        meta, _, name = rec.partition(b"\t")
+        mode, kind, _ = meta.decode().split(" ", 2)
+        if kind != "blob":
+            continue
+        src = name.decode("utf-8")
+        parts = src.split("/", 2)          # payload / <sub> / <나머지>
+        if len(parts) < 3 or parts[1] not in MAPPING:
+            continue                       # 최상위 파일과 모르는 하위 디렉터리는 건너뛴다
+        prefix = MAPPING[parts[1]]
+        dest = f"{prefix}/{parts[2]}" if prefix else parts[2]
+        entries.append((mode, src, dest))
+    return sorted(entries, key=lambda e: e[2])
+
+
+def load_rules(harness: Path, sha: str) -> dict:
+    try:
+        raw = git(harness, "show", f"{sha}:payload/rules.json")
+    except subprocess.CalledProcessError:
+        return {}
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+
+
+MISSING = object()   # 자리가 없는 것. JSON null 과 다르다.
+
+
+class Conflict(Exception):
+    """양쪽이 같은 자리를 다르게 고쳤다. 살아 있는 파일을 건드리지 않는다."""
+
+
+def ptr_get(doc, pointer: str):
+    """JSON Pointer. 없으면 MISSING 을 돌려준다 — null 과 구별한다."""
+    cur = doc
+    if pointer == "":
+        return cur
+    for raw in pointer.lstrip("/").split("/"):
+        part = raw.replace("~1", "/").replace("~0", "~")
+        if isinstance(cur, list):
+            if not part.isdigit() or int(part) >= len(cur):
+                return MISSING
+            cur = cur[int(part)]
+        elif isinstance(cur, dict):
+            if part not in cur:
+                return MISSING
+            cur = cur[part]
+        else:
+            return MISSING
+    return cur
+
+
+def ptr_set(doc, pointer: str, value) -> None:
+    parts = [p.replace("~1", "/").replace("~0", "~") for p in pointer.lstrip("/").split("/")]
+    cur = doc
+    for part in parts[:-1]:
+        cur = cur.setdefault(part, {})
+    last = parts[-1]
+    if value is MISSING:
+        cur.pop(last, None)
+    else:
+        cur[last] = value
+
+
+def three_way(base, ours, theirs):
+    """판정 세 줄. 부재도 값으로 센다."""
+    if ours == base and type(ours) is type(base):
+        return theirs
+    if theirs == base and type(theirs) is type(base):
+        return ours
+    if ours == theirs and type(ours) is type(theirs):
+        return ours
+    raise Conflict()
+
+
+def identity(element, key):
+    if key is None:
+        return json.dumps(element, sort_keys=True, ensure_ascii=False)
+    vals = []
+    for ptr in key:
+        v = ptr_get(element, ptr)
+        vals.append("\u0000없음" if v is MISSING else json.dumps(v, sort_keys=True, ensure_ascii=False))
+    return "\u0001".join(vals)
+
+
+def index_by_identity(arr, key, where: str, pointer: str) -> dict:
+    if arr is MISSING:
+        return {}
+    if not isinstance(arr, list):
+        # 전체 거부 목록에 없는 조건이다. 그 파일만의 문제이므로 충돌로 올린다.
+        raise Conflict()
+    out = {}
+    for el in arr:
+        i = identity(el, key)
+        if i in out:
+            raise Rejected("duplicate_identifier", f"{pointer} 의 식별자가 {where} 에서 유일하지 않다")
+        out[i] = el
+    return out
+
+
+def path_has_symlink(target: Path, dest: str) -> bool:
+    """dest 경로의 어느 구성 요소라도 링크인가. 대상이 아직 없어도 본다."""
+    cur = target
+    for part in dest.split("/"):
+        cur = cur / part
+        if cur.is_symlink():
+            return True
+    return False
+
+
+def escapes(dest: str) -> bool:
+    """dest 가 글자만으로 프로젝트 밖을 가리키는가.
+
+    `../victim.txt` 와 절대 경로가 실제로 저장소 밖을 지웠다(실측).
+
+    **경로를 풀어 보지 않는다.** 풀면 심볼릭 링크를 따라가 「매니페스트가 틀렸다」와
+    「대상에 링크가 걸려 있다」가 한 덩어리가 된다. 둘은 다른 조건이다 — 앞엣것은
+    전체 거부이고 뒤엣것은 사용자가 정당하게 만든 상태라 그 파일만 건너뛴다.
+    링크는 path_has_symlink 가 본다.
+    """
+    if not dest or dest.startswith("/"):
+        return True
+    return os.path.normpath(dest).startswith((os.pardir + os.sep, os.sep)) \
+        or os.path.normpath(dest) == os.pardir
+
+
+def check_owned(doc, owned: list, dest: str) -> None:
+    """식별자 유일성. 첫 배포에도 건다 — payload 자체가 중복을 담을 수 있다."""
+    for rule in owned:
+        v = ptr_get(doc, rule["pointer"])
+        if not isinstance(v, list):
+            continue
+        seen = set()
+        for el in v:
+            i = identity(el, rule.get("key"))
+            if i in seen:
+                # payload 자체가 중복을 담았다. 그 파일만의 문제가 아니라
+                # 하네스가 잘못된 것이므로 전체 거부다.
+                raise Rejected("duplicate_identifier", f"{dest} 의 {rule['pointer']}")
+            seen.add(i)
+
+
+def merge_json(base: dict, ours: dict, theirs: dict, owned: list) -> dict:
+    result = json.loads(json.dumps(ours))
+    for rule in owned:
+        ptr, key = rule["pointer"], rule.get("key")
+        b, o, t = (ptr_get(d, ptr) for d in (base, ours, theirs))
+        if any(isinstance(v, list) for v in (b, o, t)):
+            bi = index_by_identity(b, key, "base", ptr)
+            oi = index_by_identity(o, key, "대상", ptr)
+            ti = index_by_identity(t, key, "새 버전", ptr)
+            merged = []
+            for i in list(oi) + [i for i in ti if i not in oi] + [i for i in bi if i not in oi and i not in ti]:
+                v = three_way(bi.get(i, MISSING), oi.get(i, MISSING), ti.get(i, MISSING))
+                if v is not MISSING:
+                    merged.append(v)
+            ptr_set(result, ptr, merged)
+        else:
+            ptr_set(result, ptr, three_way(b, o, t))
+    return result
+
+
+def merge_text(live: Path, base: bytes, theirs: bytes, tmp: Path) -> tuple[bytes, bool]:
+    """(내용, 충돌인가). git merge-file 은 인덱스를 쓰지 않는다."""
+    bp, tp = tmp / "base", tmp / "theirs"
+    bp.write_bytes(base)
+    tp.write_bytes(theirs)
+    r = subprocess.run(["git", "merge-file", "-p", str(live), str(bp), str(tp)],
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if r.returncode == 255 or r.returncode < 0:
+        raise Rejected("merge_failed", f"git merge-file 이 실패했다: {r.stderr.decode(errors='replace').strip()}")
+    return r.stdout, r.returncode != 0
+
+
+def deploy(target: Path, from_arg: str | None) -> int:
+    """접점 검사와 잠금. 순서가 계약이다.
+
+    대상 판정이 가장 먼저다 — 뒤의 어느 단계든 경로를 만들므로, git 저장소가 아닌
+    곳에 아무것도 남기지 않으려면 여기서 끊어야 한다. dirty 검사가 잠금보다 먼저인
+    것도 같은 이유다. 잠금이 .harness/ 를 만든다.
+    """
+    if not is_repo(target):
+        return die("not_a_git_repo", "대상이 git 저장소가 아니다")
+
+    harness, code, why = resolve_source(target, from_arg)
+    if harness is None:
+        return die(code, why)
+
+    # dirty 하면 HEAD 가 실제로 쓴 내용을 가리키지 않는다. 범위를 payload/ 로 좁힌다 —
+    # 문서를 고치는 중이라고 배포를 막을 이유가 없다.
+    if git(harness, "status", "--porcelain", "--", "payload/").strip():
+        return die("harness_dirty", "하네스의 payload/ 에 커밋되지 않은 변경이 있다")
+
+    lock = target / ".harness" / "deploy.lock"
+    try:
+        lock.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        # 스펙 §3.8 이 전체 거부로 정한 자리다. 안 잡으면 traceback 과 함께 1 로
+        # 나가고, 부르는 쪽은 그것을 부분 실패로 읽는다(교차 검토 실측).
+        return die("no_permission", f"대상 루트에 쓸 수 없다: {e}")
+    try:
+        lock.mkdir()        # exist_ok 를 주면 안 된다. 이 한 번이 원자적 획득이다
+    except FileExistsError:
+        return die("lock_busy",
+                   f"다른 배포가 이 대상을 잡고 있다. 배포가 비정상 종료했다면 {lock} 을 지워라")
+    except OSError as e:
+        return die("no_permission", f"잠금을 만들 수 없다: {e}")
+    try:
+        return run_deploy(target, harness)
+    finally:
+        try:
+            lock.rmdir()    # 전체 거부로 나가는 길에도 푼다. 안 그러면 다음 배포가 막힌다
+        except OSError:
+            pass
+        try:
+            # 잠금이 만든 .harness/ 를 전체 거부가 남기면 안 된다. 첫 배포가 거부되면
+            # 무시 목록도 아직 안 걸려 있어 git status 에 그대로 뜬다(실측).
+            # 비어 있을 때만 지워지므로 정상 배포의 매니페스트는 살아남는다.
+            lock.parent.rmdir()
+        except OSError:
+            pass
+
+
+def run_deploy(target: Path, harness: Path) -> int:
+    sha = git(harness, "rev-parse", "HEAD").decode().strip()
+    remote = ""
+    try:
+        remote = git(harness, "remote", "get-url", "origin").decode().strip()
+    except subprocess.CalledProcessError:
+        pass
+
+    rules = load_rules(harness, sha)
+    prev_manifest = read_manifest(target)
+    check_manifest(target, prev_manifest)
+    prev = {f["dest"]: f for f in prev_manifest.get("files", [])}
+
+    # ── 1단계. 계산만 한다. 아무것도 쓰지 않는다.
+    # 멱등성 때문에 이 순서여야 한다 — 「바뀐 것이 없으면 매니페스트를 다시 쓰지
+    # 않는다」를 판정하려면 모든 파일의 결과를 먼저 알아야 한다.
+    import tempfile
+    tmp = Path(tempfile.mkdtemp())
+    plan: list[dict] = []
+
+    for mode, src, dest in payload_entries(harness, sha):
+        rule = rules.get(src[len("payload/"):], {})
+        kind = rule.get("merge", "text")
+        theirs = git(harness, "show", f"{sha}:{src}")
+        live = target / dest
+        entry = {"src": src, "dest": dest, "merge": kind, "sourceSha": sha,
+                 "sourceHash": sha256(theirs), "installedHash": sha256(theirs)}
+        if kind == "json":
+            entry["owned"] = rule.get("owned", [])
+
+        # 링크 검사를 먼저 한다. 대상이 아직 없어도 중간 경로가 링크이면
+        # 저장소 밖에 쓰게 된다 — 첫 배포가 그 경로로 샜다(실측).
+        if path_has_symlink(target, dest):
+            plan.append({"dest": dest, "status": "skipped", "code": "symlink",
+                         "detail": "경로에 심볼릭 링크가 있다", "entry": prev.get(dest)})
+            continue
+
+        if not live.exists():
+            if kind == "json":
+                check_owned(json.loads(theirs), rule.get("owned", []), dest)
+            plan.append({"dest": dest, "bytes": theirs, "mode": mode,
+                         "entry": entry, "status": "updated"})
+            continue
+
+        old = prev.get(dest)
+        if old is None:
+            plan.append({"dest": dest, "status": "skipped", "code": "never_deployed",
+                         "detail": "배포한 적이 없어 base 가 없다", "entry": None})
+            continue
+
+        try:
+            base = git(harness, "show", f"{old['sourceSha']}:{src}")
+        except subprocess.CalledProcessError:
+            plan.append({"dest": dest, "status": "skipped", "code": "no_base",
+                         "detail": "base 를 못 꺼냈다", "entry": old})
+            continue
+        if sha256(base) != old["sourceHash"]:
+            return die("source_hash_mismatch", f"{dest} 의 base 가 그때 배포한 것과 다르다")
+
+        cur = live.read_bytes()
+        try:
+            if kind == "json":
+                # 무효 JSON 은 구조 병합 전에 거른다. 파일별 건너뛰기이지 전체 거부가 아니다.
+                try:
+                    ours_doc = json.loads(cur)
+                except json.JSONDecodeError:
+                    plan.append({"dest": dest, "status": "skipped", "code": "invalid_json",
+                                 "detail": "대상이 유효한 JSON 이 아니다", "entry": old})
+                    continue
+                merged_doc = merge_json(json.loads(base), ours_doc, json.loads(theirs),
+                                        rule.get("owned", []))
+                out = (json.dumps(merged_doc, ensure_ascii=False, indent=2) + "\n").encode()
+                conflicted = False
+            else:
+                out, conflicted = merge_text(live, base, theirs, tmp)
+        except Conflict:
+            # live 를 그대로 베끼면 해결 자료가 되지 않는다. 세 판을 함께 담아
+            # 사람이 무엇과 무엇이 갈렸는지 볼 수 있게 한다.
+            report = {"_충돌": f"{dest} — owned 자리에서 양쪽이 다르게 고쳤다",
+                      "_base": json.loads(base), "_대상": json.loads(cur),
+                      "_새버전": json.loads(theirs)}
+            plan.append({"dest": dest, "status": "conflict", "entry": old,
+                         "merged": (json.dumps(report, ensure_ascii=False, indent=2) + "\n").encode()})
+            continue
+
+        if conflicted:
+            plan.append({"dest": dest, "status": "conflict", "entry": old, "merged": out})
+            continue
+
+        entry["installedHash"] = sha256(out)
+        plan.append({"dest": dest, "bytes": out, "mode": mode, "entry": entry,
+                     "status": "unchanged" if out == cur else "updated"})
+
+    # 사라진 배포물 — 이전 매니페스트에 있고 이번 payload 에 없는 dest.
+    # 사용자가 안 건드린 것만 지운다. 기준은 installedHash 다. 병합된 파일은
+    # 설치본이 업스트림 원문과 다르므로 sourceHash 로 재면 예전에 병합된 파일이
+    # 영영 안 지워진다.
+    seen = {p["dest"] for p in plan}
+    for dest, old in prev.items():
+        if dest in seen:
+            continue
+        live = target / dest
+        if path_has_symlink(target, dest):
+            plan.append({"dest": dest, "status": "skipped", "code": "symlink",
+                         "detail": "경로에 심볼릭 링크가 있다", "entry": old})
+        elif not live.exists():
+            plan.append({"dest": dest, "status": "deleted", "entry": None})
+        elif sha256(live.read_bytes()) != old.get("installedHash"):
+            # 항목을 남겨야 다음 배포가 다시 시도한다. 필드가 없는 옛 매니페스트도
+            # 불일치로 본다 — 안 지우는 쪽이 안전하다.
+            plan.append({"dest": dest, "status": "delete_pending",
+                         "detail": "사용자가 고쳐서 지우지 않았다", "entry": old})
+        else:
+            plan.append({"dest": dest, "status": "deleted", "entry": None, "remove": True})
+
+    # 보고물은 여기서 만든다. 짧게 끊는 경로에서도 파일 목록은 나와야 하고,
+    # 매니페스트에서 만들면 「다시 쓰지 않는」 경로에서 비어 버린다.
+    # 무시 목록보다 앞이어야 그 뒤의 전체 거부가 「목록을 비운다」를 실제로 지난다.
+    OUT["files"] = sorted((report_of(p) for p in plan), key=lambda d: d["dest"])
+
+    # 무시 목록을 파일보다 먼저 건다. 못 쓰면 전체 거부이므로 그 뒤에 배포물이
+    # 남아 있으면 안 된다.
+    try:
+        write_exclude(target, exclude_entries(target, seen))
+    except OSError as e:
+        raise Rejected("exclude_write_failed", f"무시 목록을 못 썼다: {e}")
+
+    # ── 2단계. 바뀐 것이 없으면 아무것도 쓰지 않는다.
+    # 삭제는 파일이 이미 없더라도 매니페스트에서 항목을 빼야 하므로 changed 다.
+    # 반면 종료 코드는 0 이다 — 지운 것은 실패가 아니다.
+    changed = any(p["status"] in ("updated", "deleted") for p in plan)
+    skipped = [p for p in plan if p["status"] in ("skipped", "conflict", "delete_pending")]
+    # 치울 충돌 보고물이 남아 있으면 바뀐 것이 없어도 지나가면 안 된다.
+    stale = [p for p in plan if p["status"] in ("updated", "unchanged")
+             and Path(str(target / p["dest"]) + ".merged").exists()]
+    if not changed and not skipped and not stale:
+        return OK
+
+    def blocked(entry: dict, why: OSError) -> None:
+        """그 파일에만 쓸 수 없다. 계약이 파일별 건너뛰기로 정한 조건이다.
+
+        1단계에서는 미리 알 수 없다 — 권한은 쓰려고 해야 드러난다. 그래서 여기서
+        판정을 바꾸고 매니페스트 항목은 이전 것을 유지한다.
+        """
+        entry.update({"status": "skipped", "code": "no_permission",
+                      "detail": f"그 파일에 쓸 수 없다: {why}",
+                      "entry": prev.get(entry["dest"])})
+        skipped.append(entry)
+
+    for p in plan:
+        if p["status"] in ("updated", "unchanged"):
+            out = target / p["dest"]
+            try:
+                if p["status"] == "updated":
+                    out.parent.mkdir(parents=True, exist_ok=True)
+                    out.write_bytes(p["bytes"])
+                    if p["mode"].endswith("755"):
+                        out.chmod(out.stat().st_mode | 0o111)
+                m = Path(str(out) + ".merged")
+                if m.exists():
+                    m.unlink()      # 성공한 배포가 옛 충돌 보고물을 치운다
+            except OSError as e:
+                blocked(p, e)
+        elif p["status"] == "deleted" and p.get("remove"):
+            try:
+                (target / p["dest"]).unlink()
+            except OSError as e:
+                blocked(p, e)
+        elif p["status"] == "conflict":
+            m = Path(str(target / p["dest"]) + ".merged")
+            try:
+                if m.is_symlink():
+                    m.unlink()      # 보고물 경로가 링크면 따라 쓰지 않는다
+                m.write_bytes(p["merged"])
+            except OSError as e:
+                blocked(p, e)
+
+    # 쓰다 막힌 파일이 있으면 판정이 바뀌었다. 보고물을 다시 만든다.
+    OUT["files"] = sorted((report_of(q) for q in plan), key=lambda d: d["dest"])
+
+    if not changed and not skipped:
+        return OK                   # 보고물만 치웠다. 매니페스트는 그대로 둔다
+
+    # prev 를 통째로 이어붙이지 않는다. 사라진 배포물은 위 순회가 이미 판정했고,
+    # 지운 것은 entry 가 None 이라 여기서 빠진다. 이어붙이면 되살아난다.
+    files = [p["entry"] for p in plan if p["entry"] is not None]
+    manifest = {
+        "attemptedSha": sha,
+        "source": {"remote": remote, "path": str(harness)},
+        "files": sorted(files, key=lambda f: f["dest"]),
+    }
+    # deployedAt 을 뺀 나머지가 그대로면 다시 쓰지 않는다. 충돌이나 delete_pending 이
+    # 남은 대상은 배포할 때마다 부분 실패로 끝나는데, 그때마다 매니페스트를 다시 쓰면
+    # 「여러 번 배포해도 아무것도 안 바뀐다」가 부분 실패 경로에서만 깨진다(검토 실측).
+    if any(prev_manifest.get(k) != v for k, v in manifest.items()):
+        now = subprocess.run(["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"],
+                             check=True, stdout=subprocess.PIPE).stdout.decode().strip()
+        out = {"attemptedSha": manifest["attemptedSha"], "deployedAt": now,
+               "source": manifest["source"], "files": manifest["files"]}
+        mp = target / ".harness" / "manifest.json"
+        mp.parent.mkdir(parents=True, exist_ok=True)
+        mp.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    for p in skipped:
+        print(f"{p['status']}: {p['dest']} — {p.get('detail','충돌')}", file=sys.stderr)
+    return PARTIAL if skipped else OK
+
+
+class Rejected(Exception):
+    """전체 거부로 끝낼 사유. 종료 코드 2로 나간다.
+
+    code 는 계약의 reason 값이고, 목록에 없는 경우에는 None 이다.
+    """
+
+    def __init__(self, code: str | None, detail: str):
+        super().__init__(detail)
+        self.code = code
+        self.detail = detail
+
+
+def main(argv: list[str]) -> int:
+    # 기본 동작은 finally 를 안 돌리고 죽는다. 그러면 잠금이 남아 다음 배포가
+    # 영영 막힌다(교차 검토 실측 — TERM·INT 둘 다). SIGKILL 은 못 막는다.
+    def _bye(signum, frame):
+        raise SystemExit(REJECTED)
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        signal.signal(sig, _bye)
+
+    # 먼저 훑는다. 인자를 순서대로 읽다 오류를 만나면 그 뒤의 --json 을 못 보고,
+    # 부르는 쪽이 깃발 순서를 맞춰야 기계가 읽는 출력이 나오게 된다.
+    OUT["json"] = "--json" in argv
+
+    if not argv or argv[0] != "deploy":
+        return die("bad_usage", "사용법: gridfin deploy [--from <하네스 저장소>] [--json]")
+    rest = argv[1:]
+    from_arg = None
+    while rest:
+        if rest[0] == "--from" and len(rest) > 1:
+            from_arg, rest = rest[1], rest[2:]
+        elif rest[0] == "--json":
+            rest = rest[1:]         # 위에서 이미 켰다
+        else:
+            return die("bad_usage", f"모르는 인자: {rest[0]}")
+    try:
+        rc = deploy(Path.cwd(), from_arg)
+    except Rejected as e:
+        return die(e.code, e.detail)
+    except subprocess.CalledProcessError as e:
+        # git 이 실패하면 하네스 입력이 잘못된 것이다. 1은 부분 실패라는 뜻이라
+        # 여기로 새면 부르는 쪽이 두 상황을 구별하지 못한다.
+        err = (e.stderr or b"").decode(errors="replace").strip()
+        return die("git_failed", f"{' '.join(e.cmd[:4])}\n{err}")
+    if rc != REJECTED:              # 거부는 die 가 이미 냈다. 두 번 내면 안 된다
+        emit("partial" if rc == PARTIAL else "success", None, OUT["files"])
+    return rc
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
