@@ -5,7 +5,7 @@ milestone: M0 기반 만들기
 label: hook
 정본: 이 이슈의 작업 스펙에 한해 이 파일 · 이슈 본문은 여기서 나오는 발행본이다. 미결 항목의 정본은 미결 목록 파일이다
 발행: 2026-08-20 · 이슈 #2
-bodyHash: sha256:8b0f292da90d51710d2a16be27ab9b9e672e0fe02d82528793199e16b76de8d4
+bodyHash: sha256:1f6aff8b5adaa07e04551302fd4d02eff0a7a2f595be1d3208afd17ff9ce9040
 최초 작성: 2026-08-20
 최종 수정: 2026-08-20
 ---

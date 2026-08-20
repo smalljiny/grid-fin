@@ -529,7 +529,7 @@
   <header>
     <p class="eyebrow">grid fin · 개인용 개발 하네스 · 2026-08-20 · <strong>M0 진행 중</strong></p>
     <h1>grid fin 구현 로드맵</h1>
-    <p class="lede">조사와 설계는 끝났고, 구현이 시작됐습니다. <strong>M0의 네 가지 중 배포 스크립트가 끝났습니다</strong>(<code>bin/gridfin</code>, PR #15, 2026-08-20 머지). 남은 세 가지는 훅 스크립트, 선언 설정 파일, Python 검사 어댑터입니다. 넷이 모두 끝나면 grid fin 저장소에 배포하고, 그 뒤부터는 하네스가 자기 개발 과정에도 적용됩니다.</p>
+    <p class="lede">조사와 설계는 끝났고, 구현이 시작됐습니다. <strong>M0의 네 가지 중 배포 스크립트와 훅 스크립트가 끝났습니다</strong>(<code>bin/gridfin</code> · PR #15, 그리고 훅 4개와 <code>bin/gridfin-inject</code> · 이슈 #2). 남은 두 가지는 선언 설정 파일과 Python 검사 어댑터입니다. 넷이 모두 끝나면 grid fin 저장소에 배포하고, 그 뒤부터는 하네스가 자기 개발 과정에도 적용됩니다.</p>
     <p class="lede" style="margin-top:8px"><strong>현재 기준선</strong> — 조사 31편, 설계 드래프트 5편, 해소한 미결 54건, 남은 미결 23건입니다(<a href="../draft/open-questions.md">미결 목록 파일</a>의 항목 수). <strong>이 문서는 일정표가 아니라 실행 순서를 정리한 로드맵입니다.</strong> 개인 프로젝트 규모에서는 통계적으로 설계를 검증하기 어렵기 때문에(<a href="../research/evaluation.md">평가 조사 §1.5</a>), 실제 검증은 워크플로를 처음부터 끝까지 한 번 실행하는 M1에서 시작합니다.</p>
 
     <!-- ══ HERO 진행 상황 ══ -->
@@ -998,7 +998,7 @@
       <div class="next-card is-done">
         <div class="next-n">1 · 완료</div>
         <div class="next-t">배포 스크립트</div>
-        <p class="next-d">나머지 세 작업이 이 배포 스크립트 위에 올라갑니다. 배포 대상 8가지는 설계 §7-4에 있고, <strong>M0에서 넣는 것은 다섯입니다.</strong> 훅 스크립트, 훅 선언, 권한 허용 목록, 선언 설정, 매니페스트입니다. 스킬과 검토용 에이전트는 M2에서 늘어납니다. 지금 <code>payload/</code>에 들어 있는 것은 훅 선언과 권한 허용 목록이고, 훅 스크립트는 2번이 채울 자리표시본입니다.</p>
+        <p class="next-d">나머지 세 작업이 이 배포 스크립트 위에 올라갑니다. 배포 대상 8가지는 설계 §7-4에 있고, <strong>M0에서 넣는 것은 다섯입니다.</strong> 훅 스크립트, 훅 선언, 권한 허용 목록, 선언 설정, 매니페스트입니다. 스킬과 검토용 에이전트는 M2에서 늘어납니다. 훅 스크립트 4개와 훅이 함께 쓰는 코드는 2번이 채웠고, <code>payload/root/</code> 의 선언 설정은 3번이 만듭니다.</p>
       </div>
       <div class="next-card">
         <div class="next-n">2</div>
