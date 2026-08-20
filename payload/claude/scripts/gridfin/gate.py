@@ -14,6 +14,8 @@
 import json
 import os
 import pathlib
+import re
+import shlex
 
 TOKEN_GATE = "GRIDFIN_GATE"
 TOKEN_FORMAT = "GRIDFIN_FORMAT"
@@ -23,6 +25,16 @@ SETTINGS = ".claude/settings.json"
 MANIFEST = ".harness/manifest.json"
 
 _PREFIXES = ("${CLAUDE_PROJECT_DIR}/", "$CLAUDE_PROJECT_DIR/")
+_ENV_ASSIGN = re.compile(r"^[A-Za-z_][A-Za-z_0-9]*=")
+# 절을 가르는 글자들. `punctuation_chars` 가 켜지면 shlex 가 이 글자들의 이어짐을
+# 낱말 하나로 내므로(`&&` · `||` · `;;` · `|&`) 글자 집합으로 판정하면 전부 덮인다.
+# 괄호도 넣는다 — `(git commit)` 의 앞 낱말이 `(` 라 걷어내지 않으면 git 을 못 본다.
+# 리다이렉션(`<` `>`)은 넣지 않는다. 넣어도 아무 시험이 달라지지 않았다 —
+# `git status > out; git commit` 은 `;` 가 이미 가르고, `git commit > log` 는
+# 리다이렉션이 커밋 뒤에 오므로 앞 낱말 판정이 그대로다.
+_SEPARATOR_CHARS = set(";&|()")
+# 중괄호는 shlex 의 punctuation 이 아니라 따로 본다 — `{ git commit; }`
+_BRACES = ("{", "}")
 
 
 class BadInput(Exception):
@@ -192,6 +204,69 @@ def inside_root(target: str, root: pathlib.Path) -> bool:
     return True
 
 
+CONFIG = "gridfin.json"
+
+
+def is_commit(command: str) -> bool | None:
+    """Bash 도구 호출의 명령 문자열이 커밋인가.
+
+    돌려주는 것은 참 · 거짓 · None 이다. **None 은 「판정할 수 없다」이고 부르는
+    쪽이 막아야 한다** — 판정 불가를 통과로 두면 셸 문법을 못 읽는 것이 곧
+    게이트를 지나는 길이 된다.
+
+    **낱말로 가른다.** `git commit-graph` 나 `git-commit-tree` 같은 이름이 겹치는
+    명령을 커밋으로 오인하지 않으려면 부분 문자열로 찾으면 안 된다.
+    """
+    if command is None:
+        return None
+    try:
+        # punctuation_chars 를 켠다. 기본 모드는 공백 없는 구분자를 한 낱말로 붙여
+        # `git add .;git commit` 의 뒤쪽을 놓친다(1차 실측 2026-08-20).
+        lexer = shlex.shlex(command, posix=True, punctuation_chars=True)
+        lexer.whitespace_split = True
+        parts = list(lexer)
+    except ValueError:
+        # 따옴표가 안 닫혔다. 무엇인지 알 수 없으므로 판정 불가다
+        return None
+
+    # 구분자로 잘라 각 절을 따로 본다. `git add . && git commit` 의 뒤쪽을 놓치지 않는다
+    clause: list[str] = []
+    clauses: list[list[str]] = [clause]
+    for word in parts:
+        if word in _BRACES or (word and set(word) <= _SEPARATOR_CHARS):
+            clause = []
+            clauses.append(clause)
+        else:
+            clause.append(word)
+
+    for words in clauses:
+        # 환경변수 접두를 걷어낸다 — `A=1 B=2 git commit`
+        i = 0
+        while i < len(words) and _ENV_ASSIGN.match(words[i]):
+            i += 1
+        rest = words[i:]
+        if not rest:
+            continue
+        head = pathlib.PurePath(rest[0]).name
+        if head != "git":
+            continue
+        # git 의 전역 깃발을 걷어낸다 — `-C <경로>` · `-c k=v` · `--no-pager`
+        j = 1
+        while j < len(rest):
+            word = rest[j]
+            if word in ("-C", "-c", "--git-dir", "--work-tree", "--namespace",
+                        "--exec-path", "--config-env"):
+                j += 2
+                continue
+            if word.startswith("-"):
+                j += 1
+                continue
+            break
+        if j < len(rest) and rest[j] == "commit":
+            return True
+    return False
+
+
 def blocked(event: str, result: dict) -> str:
     """차단하는 훅이 stderr 에 내는 것. 종료 코드 2와 함께 쓴다."""
     return "%s\n%s\n" % (describe(result), gate_line(result))
@@ -206,4 +281,7 @@ def describe(result: dict) -> str:
     kinds = {m.get("kind") for m in result.get("missing", [])}
     if kinds == {"outside_root"}:
         return "프로젝트 루트 밖에는 쓰지 않는다 — %s." % items
+    if kinds == {"config"}:
+        return ("선언 설정 파일이 없다 — %s. 검사를 만들지 않았다면 그 이유를 "
+                "선언해야 한다. 선언되지 않은 부재는 결손이다." % items)
     return "게이트가 막았다 — %s. `gridfin deploy` 를 다시 실행한다." % items

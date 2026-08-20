@@ -478,8 +478,144 @@ c15() {
   test "$(hook_rc)" = 2
 }
 
+# ── 6.4 커밋 경계 ──────────────────────────────────────────
+
+bash_in() {  # $1=command $2=cwd
+  python3 -c 'import json,sys; print(json.dumps({"session_id":"t","cwd":sys.argv[2],
+    "hook_event_name":"PreToolUse","tool_name":"Bash",
+    "tool_input":{"command":sys.argv[1]}}))' "$1" "$2"
+}
+# 선언 설정 파일을 픽스처로 놓는다. 형식은 이슈 #3이 정하고 여기서는 존재만 본다
+put_config() { printf '{}\n' > "$1/gridfin.json"; }
+
+c18_desc="C18 선언 설정 파일이 없으면 커밋 명령을 막고 stderr 에 GRIDFIN_GATE 줄을 낸다"
+c18() {
+  T=$(deployed)
+  test ! -f "$T/gridfin.json"
+  run_hook "$T" pre-commit "$(bash_in 'git commit -m "x"' "$T")" > /dev/null
+  test "$(hook_rc)" = 2
+  hook_err | sed -n 's/^.*GRIDFIN_GATE //p' | head -1 |
+    jq -e '.ok == false and ([.missing[].kind] | index("config") != null)' > /dev/null
+}
+
+c19_desc="C19 선언 설정 파일이 있으면 커밋 명령이 통과한다"
+c19() {
+  T=$(deployed); put_config "$T"
+  run_hook "$T" pre-commit "$(bash_in 'git commit -m "x"' "$T")" > /dev/null
+  test "$(hook_rc)" = 0
+  #      검사가 살아 있다. 없으면 언제나 0을 내는 구현이 통과한다
+  rm "$T/gridfin.json"
+  run_hook "$T" pre-commit "$(bash_in 'git commit -m "x"' "$T")" > /dev/null
+  test "$(hook_rc)" = 2
+}
+
+c20_desc="C20 커밋이 아닌 Bash 호출은 선언 설정이 없어도 통과한다"
+c20() {
+  T=$(deployed)
+  for cmd in 'git status' 'ls -la' 'git log --oneline' 'echo commit' \
+             'git add .' 'git push' 'grep -r "git commit" .' 'cat commit.txt'; do
+    run_hook "$T" pre-commit "$(bash_in "$cmd" "$T")" > /dev/null
+    test "$(hook_rc)" = 0
+  done
+}
+
+c21_desc="C21 인식이 형태 4개를 뚫는다 — 인용 · 환경변수 접두 · 복합 명령 · -C 경로"
+c21() {
+  T=$(deployed)
+  #      전부 커밋이다. 선언 설정이 없으므로 넷 다 막혀야 한다
+  while IFS= read -r cmd; do
+    [ -z "$cmd" ] && continue
+    run_hook "$T" pre-commit "$(bash_in "$cmd" "$T")" > /dev/null
+    if [ "$(hook_rc)" != 2 ]; then printf '못 잡았다: %s\n' "$cmd"; return 1; fi
+  done <<'CMDS'
+git "commit" -m "x"
+git 'commit' -m x
+GIT_AUTHOR_NAME=a git commit -m x
+GIT_AUTHOR_NAME=a GIT_COMMITTER_NAME=b git commit -m x
+git add . && git commit -m x
+git add . ; git commit -m x
+git status || git commit -m x
+git -C sub commit -m x
+git -C sub -c user.name=a commit -m x
+git --no-pager commit -m x
+git commit
+git commit --amend --no-edit
+git add .;git commit -m x
+git add .&&git commit -m x
+(git commit -m x)
+/usr/bin/git commit -m x
+cd sub && git commit -m x
+git add . | tee log; git commit -m x
+{ git commit -m x; }
+git status > out; git commit -m x
+CMDS
+}
+
+c22_desc="C22 커밋과 이름이 비슷한 명령을 커밋으로 오인하지 않는다"
+c22() {
+  T=$(deployed)
+  while IFS= read -r cmd; do
+    [ -z "$cmd" ] && continue
+    run_hook "$T" pre-commit "$(bash_in "$cmd" "$T")" > /dev/null
+    if [ "$(hook_rc)" != 0 ]; then printf '오인했다: %s\n' "$cmd"; return 1; fi
+  done <<'CMDS'
+git commit-graph write
+git-commit-tree
+echo "git commit -m x"
+printf 'git commit\n'
+grep -n "commit" file.txt
+git config commit.gpgsign false
+gh pr comment 1 --body "git commit"
+git commitmsg
+git  commit-tree
+CMDS
+
+  #      여러 줄 명령은 위의 줄 단위 목록으로 표현할 수 없어 따로 잰다.
+  #      heredoc 안에 커밋 문장이 있어도 실행되는 명령은 cat 이다
+  run_hook "$T" pre-commit "$(python3 -c 'import json;print(json.dumps({"cwd":"'"$T"'","hook_event_name":"PreToolUse","tool_input":{"command":"cat <<\u0027EOF\u0027\ngit commit -m x\nEOF"}}))')" > /dev/null
+  test "$(hook_rc)" = 0
+}
+
+c23_desc="C23 등록이 불완전하거나 매니페스트가 없으면 선언 설정이 있어도 막는다"
+c23() {
+  T=$(deployed); put_config "$T"
+  jq 'del(.hooks.PostToolUse)' "$T/.claude/settings.json" > "$T/t.json"
+  mv "$T/t.json" "$T/.claude/settings.json"
+  run_hook "$T" pre-commit "$(bash_in 'git commit -m x' "$T")" > /dev/null
+  test "$(hook_rc)" = 2
+  hook_err | sed -n 's/^.*GRIDFIN_GATE //p' | head -1 |
+    jq -e '[.missing[].kind] | index("hook_declaration") != null' > /dev/null
+
+  T2=$(deployed); put_config "$T2"; rm "$T2/.harness/manifest.json"
+  run_hook "$T2" pre-commit "$(bash_in 'git commit -m x' "$T2")" > /dev/null
+  test "$(hook_rc)" = 2
+}
+
+c24_desc="C24 stdin 이 JSON 이 아니면 차단한다 — 열거하지 않은 경우도 막는다"
+c24() {
+  T=$(deployed); put_config "$T"
+  run_hook "$T" pre-commit 'not json' > /dev/null
+  test "$(hook_rc)" = 2
+  #      JSON 이되 command 가 없다. 커밋인지 판정할 수 없으면 막는다
+  run_hook "$T" pre-commit "{\"hook_event_name\":\"PreToolUse\",\"cwd\":\"$T\",\"tool_input\":{}}" > /dev/null
+  test "$(hook_rc)" = 2
+  #      따옴표가 안 닫혀 판정할 수 없으면 막는다.
+  #      판정 불가를 통과로 두면 그것이 곧 게이트를 지나는 길이 된다
+  run_hook "$T" pre-commit "$(bash_in 'git commit -m "안 닫힌' "$T")" > /dev/null
+  test "$(hook_rc)" = 2
+  #      공용 모듈이 예외를 던진다
+  T2=$(deployed); put_config "$T2"
+  printf 'raise RuntimeError("일부러")\n' >> "$T2/.claude/scripts/gridfin/gate.py"
+  run_hook "$T2" pre-commit "$(bash_in 'git commit -m x' "$T2")" > /dev/null
+  test "$(hook_rc)" = 2
+  #      공용 모듈이 아예 없다 — import 가 실패한다
+  T3=$(deployed); put_config "$T3"; rm "$T3/.claude/scripts/gridfin/gate.py"
+  run_hook "$T3" pre-commit "$(bash_in 'git commit -m x' "$T3")" > /dev/null
+  test "$(hook_rc)" = 2
+}
+
 # ── 실행기 ────────────────────────────────────────────────
-ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17"
+ALL="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24"
 
 pass=0; fail=0
 for n in ${*:-$ALL}; do
